@@ -11,16 +11,22 @@
   const names = PaperGame.levelNames;
   const locations = Scenery.locations;
   const levelCount = names.length;
+  const chaptersPerWalk = 10;
+  const walkButtons = [find("first-walk"), find("second-walk")];
   const saveKey = "paperheart-anniversary-v1";
 
   function readSave() {
     try {
       const data = JSON.parse(localStorage.getItem(saveKey));
       const chapters = Array.isArray(data?.completed) ? data.completed : [];
+      const completed = new Set(chapters.filter((chapter) => Number.isInteger(chapter) && chapter >= 0 && chapter < levelCount));
+      // A finished ten-chapter card can go directly to the newly opened market.
+      const finishedOriginal = !data?.chapterCount && completed.size === chaptersPerWalk &&
+        [...completed].every(chapter => chapter < chaptersPerWalk);
       return {
-        completed: new Set(chapters.filter((chapter) => Number.isInteger(chapter) && chapter >= 0 && chapter < levelCount)),
+        completed,
         sound: data?.sound !== false,
-        lastChapter: Number.isInteger(data?.lastChapter) ? data.lastChapter : null
+        lastChapter: finishedOriginal ? chaptersPerWalk : Number.isInteger(data?.lastChapter) ? data.lastChapter : null
       };
     } catch {
       return { completed: new Set(), sound: true, lastChapter: null };
@@ -30,6 +36,7 @@
   const progress = readSave();
   let audio;
   let current = 0;
+  let selectedWalk = 0;
   let result = null;
   let screen = "menu";
   let lastFocus;
@@ -37,7 +44,7 @@
 
   function save() {
     try {
-      localStorage.setItem(saveKey, JSON.stringify({ completed: [...progress.completed], sound: progress.sound, lastChapter: progress.lastChapter }));
+      localStorage.setItem(saveKey, JSON.stringify({ completed: [...progress.completed], sound: progress.sound, lastChapter: progress.lastChapter, chapterCount: levelCount }));
     } catch {
       // Progress remains available until the page closes.
     }
@@ -52,6 +59,12 @@
     pass: [[523, 0, .12], [659, .06, .14], [784, .12, .18]],
     crumble: [[247, 0, .07], [185, .045, .11]],
     fall: [[392, 0, .09], [294, .045, .14]],
+    chime1: [[523.25, 0, .39], [1046.5, .04, .15]],
+    chime2: [[659.25, 0, .39], [1318.5, .04, .15]],
+    chime3: [[783.99, 0, .39], [1567.98, .04, .15]],
+    chime4: [[1046.5, 0, .48], [1318.5, .08, .24]],
+    shutter: [[880, 0, .035], [392, .043, .052]],
+    postmark: [[293.66, 0, .065], [587.33, .066, .12]],
     complete: [[523, 0, .24], [659, .12, .26], [784, .25, .3], [1047, .40, .4]]
   };
 
@@ -240,14 +253,21 @@
   }
 
   function showResult() {
-    if (result === levelCount - 1) {
+    if (result === chaptersPerWalk - 1) {
       showDialog("On the same page", find("ending-note").content.cloneNode(true), [
-        ["Play again", () => openChapter(0)],
+        ["Start chapter 11", () => openChapter(chaptersPerWalk)],
         ["Main menu", () => enterMenu()]
       ]);
       return;
     }
-    showDialog("Chapter complete", paragraphs(names[result] + " is tucked into your card."), [
+    if (result === levelCount - 1) {
+      showDialog("Stay for the sunrise", find("sunrise-note").content.cloneNode(true), [
+        ["Walk together again", () => openChapter(0)],
+        ["Main menu", () => enterMenu()]
+      ]);
+      return;
+    }
+    showDialog("Chapter complete", paragraphs(game.layout.note || names[result] + " is tucked into your card."), [
       ["Next chapter", () => openChapter(result + 1)],
       ["Replay chapter", () => openChapter(result)]
     ]);
@@ -255,7 +275,7 @@
 
   function isUnlocked(index) {
     return Number.isInteger(index) && index >= 0 && index < levelCount &&
-      (index === 0 || progress.completed.has(index) || progress.completed.has(index - 1));
+      (index === 0 || index === chaptersPerWalk || progress.completed.has(index) || progress.completed.has(index - 1));
   }
 
   function savedChapter() {
@@ -284,7 +304,11 @@
     list.replaceChildren();
     const expanded = screen === "chapters";
     const selected = screen === "play" ? current : game.level >= 0 && result === null ? current : savedChapter();
-    for (const [index, title] of names.entries()) {
+    walkButtons.forEach((button, i) => button.setAttribute("aria-pressed", String(i === selectedWalk)));
+    const first = selectedWalk * chaptersPerWalk;
+    const last = Math.min(first + chaptersPerWalk, levelCount);
+    for (let index = first; index < last; index++) {
+      const title = names[index];
       const button = document.createElement("button");
       const done = progress.completed.has(index);
       const number = String(index + 1).padStart(2, "0");
@@ -339,6 +363,7 @@
   function resumeChapter() {
     switchScreen("play");
     game.setPaused(false);
+    selectedWalk = Math.floor(current / chaptersPerWalk);
     renderChapters();
     world.focus();
   }
@@ -349,6 +374,7 @@
     if (dialog.open) dialog.close();
     releaseControls();
     current = index;
+    selectedWalk = Math.floor(index / chaptersPerWalk);
     result = null;
     progress.lastChapter = index;
     save();
@@ -384,9 +410,14 @@
   });
   find("menu-chapters").addEventListener("click", () => {
     switchScreen("chapters");
+    selectedWalk = Math.floor((game.level >= 0 && result === null ? current : savedChapter()) / chaptersPerWalk);
     renderChapters();
     find("chapters-back").focus();
   });
+  walkButtons.forEach((button, index) => button.addEventListener("click", () => {
+    selectedWalk = index;
+    renderChapters();
+  }));
   find("chapters-back").addEventListener("click", () => enterMenu());
   find("back-to-menu").addEventListener("click", () => enterMenu());
 
@@ -407,7 +438,8 @@
     showDialog("How to play", paragraphs(
       "Move with the arrow keys or A and D. Press Space to jump.",
       "Press X to fold the card and switch between Axel and Swayze. Use the on-screen controls on a touch screen.",
-      "Follow the note under the play area. Step onto switches, pass letters between pages, and time your jumps across moving or fragile paper. If you fall, you’ll return to safe ground."
+      "Follow the note under the play area. If you fall, you’ll return to safe ground.",
+      "In After Hours, jump into wind arrows to glide. Gold moons hold Axel and pink hearts hold Swayze. Numbered bells show the melody even with sound off."
     ), [["Got it", () => dialog.close()]]);
   });
 

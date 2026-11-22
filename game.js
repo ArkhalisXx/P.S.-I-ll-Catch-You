@@ -14,6 +14,12 @@
   const loose = (x, y, w) => ground(x, y, w, 16, {style:'ribbon', crumble:true});
   const point = (x, y) => ({x,y});
   const task = (kind, x, y, side, progress, hint) => ({kind,x,y,side,progress,hint});
+  const foldTile = (x, y, w, affinity) => ground(x, y, w, 20, {affinity});
+  const chime = (x, y, side, value, hint) => ({
+    ...task('chime', x, y, side, 'Ring bell ' + value, hint), value
+  });
+  const wind = (x, y, w, h, dx, dy) => ({x,y,w,h,dx,dy});
+  const PHOTO_SECONDS = 0.45;
 
   // Objective positions use the character's feet. Each chapter owns its movement
   // route, its starting positions and its win condition, including the reunion.
@@ -75,6 +81,74 @@
       platforms:[shore(0,211,153),ground(181,185,65),ground(273,160,62),
         ground(348,180,48),shore(398,192,242)],
       steps:[task('reunion',563,192,0,'Find Swayze','“There you are, baby!” Follow the promenade and walk into Swayze’s arms.')]},
+    {name:'The Last Dumpling', side:0, starts:[point(53,222),point(580,201)], goalLabel:'Share a midnight snack',
+      note:'“I saved you the last one, baby.” Axel opens the little bamboo basket.',
+      wind:[wind(174,89,63,130,0,-172)],
+      platforms:[shore(0,222,130),ground(151,212,94),ground(234,121,83),
+        ground(345,151,62),ground(432,176,54),shore(516,201,124)],
+      steps:[task('dumpling',275,121,0,'Find the basket','Jump into the rising steam. Float up, then steer right onto the high stall for the last dumpling.'),
+        {...task('handoff',580,201,0,'Supper for two','Carry the warm basket down to Swayze at the other end of the market.'),item:'dumpling'}]},
+    {name:'Our Song, Side A', side:1, starts:[point(562,169),point(54,205)], goalLabel:'Play the record-shop tune',
+      note:'Swayze hums the three notes again. Axel knows the song before she finishes.',
+      platforms:[shore(0,205,110),ground(142,180,64),ground(250,201,64),ground(229,134,56),
+        ground(325,155,59),ground(417,138,52),shore(511,169,129)],
+      steps:[chime(174,180,1,1,'Jump through bell 1 to start your song. Follow the numbers on the bells.'),
+        chime(355,155,1,2,'Play bell 2 on the long middle shelf.'),
+        chime(256,134,1,3,'Turn back left for bell 3 on the higher shelf.'),
+        task('arrive',567,169,1,'Song recorded','Slip the finished record into the sleeve on the right.')]},
+    {name:'Glasshouse for Two', side:0, starts:[point(51,214),point(346,166)], goalLabel:'Trade the seed packet',
+      note:'There are two names on the seed packet. You find a sunny spot to plant it together.',
+      platforms:[shore(0,214,115),foldTile(142,184,65,0),foldTile(233,153,54,0),ground(309,166,76),
+        foldTile(407,145,50,1),foldTile(488,170,50,1),shore(555,197,85)],
+      steps:[task('carry',258,153,0,'Find the seeds','Gold moons hold Axel. Cross them to pick up the seed packet.'),
+        task('handoff',346,166,0,'Pass the seeds','Meet Swayze on the stone bench and pass her the seeds.'),
+        task('drop',596,197,1,'Plant together','Fold to Swayze. Her pink heart tiles lead to the planter on the right.')]},
+    {name:'Two Tickets, Please', side:1, starts:[point(590,156),point(56,210)], goalLabel:'Ride the Ferris wheel',
+      note:'“Look down, baby.” From the top of the wheel, even the streetlights look like stars.',
+      platforms:[shore(0,210,150),ground(174,199,54),ground(248,169,76,17,{lift:51,speed:1.08,phase:Math.PI/2,gondola:true}),
+        ground(357,94,84),ground(466,126,54),shore(551,156,89)],
+      steps:[task('ticket',201,199,1,'Get your tickets','Pick up the pair of tickets beside the low boarding platform.'),
+        task('rideTop',286,122,1,'Ride to the top','Step onto the gondola when it comes down. Stay aboard until the little flag is level with you.'),
+        {...task('handoff',590,156,1,'A seat for Axel','Hop onto the high pier, then bring Axel his ticket.'),item:'ticket'}]},
+    {name:'Hold Still, Baby', side:0, starts:[point(54,215),point(607,202)], goalLabel:'Take a pair of portraits',
+      note:'The first photo is a little crooked. The second catches you both laughing. You keep them both.',
+      platforms:[shore(0,215,126),ground(150,182,62),ground(235,156,54),ground(311,175,87),
+        ground(430,145,61),ground(516,175,47),shore(578,202,62)],
+      steps:[task('photo',179,182,0,'Axel’s portrait','Stand still by the left camera until its shutter clicks.'),
+        task('photo',460,145,1,'Swayze’s portrait','Fold to Swayze. Find the right camera and hold still for her portrait.'),
+        {...task('handoff',179,182,1,'Swap photo strips','Take Swayze’s photo strip back across the puddles to Axel.'),item:'print'}]},
+    {name:'Kites After Midnight', side:0, starts:[point(51,211),point(585,166)], goalLabel:'Catch the runaway kites',
+      note:'Two kites tug at the same string. You wind it around your hands on the way down.',
+      wind:[wind(157,69,192,122,108,0),wind(365,58,144,111,66,0)],
+      platforms:[shore(0,211,104),spring(124,196,64),ground(345,167,63),ground(471,133,51),shore(557,166,83)],
+      steps:[task('kite',374,167,0,'Kites 0/2','Jump from the spring into the rightward wind. Steer across the wide gap to catch the first kite.'),
+        task('kite',496,133,0,'Kites 1/2','Catch the second breeze up to the kite on the high ridge.'),
+        task('arrive',598,166,0,'Both strings safe','Bring the kite strings down to the hilltop bench.')]},
+    {name:'The Last Tram', side:1, starts:[point(65,202),point(591,208)], goalLabel:'Catch the last tram',
+      note:'There’s a whole empty carriage. You slide into the same seat anyway.',
+      platforms:[shore(0,202,106),ground(133,177,83,22,{belt:-57}),ground(248,151,65,22,{belt:72}),
+        ground(347,166,68,22,{belt:-64}),ground(446,188,73,22,{belt:75}),shore(551,208,89)],
+      steps:[task('ticket',484,188,1,'Find the ticket','Go left for the ticket. The arrow belts carry you even when you stand still.'),
+        task('switch',278,151,1,'Flag the tram','Make your way against the moving walkways to the pink signal ribbon in the middle.'),
+        {...task('handoff',65,202,1,'All aboard','The tram is waiting. Share the ticket with Axel on the left platform.'),item:'ticket'}]},
+    {name:'Midnight Counterpoint', side:0, starts:[point(53,211),point(594,178)], goalLabel:'Play a four-note duet',
+      note:'Four notes ring out over the square. For a moment, the whole city sounds like your song.',
+      platforms:[shore(0,211,103),foldTile(130,179,65,0),spring(218,148,63),ground(289,81,68),
+        foldTile(379,103,51,1),foldTile(459,141,60,1),shore(552,178,88)],
+      steps:[chime(161,179,0,1,'Axel opens the duet. Ring bell 1 on his gold moon tile.'),
+        chime(489,141,1,2,'Swayze answers from the other side. Play bell 2 on her lower heart tile.'),
+        chime(322,81,0,3,'Back to Axel. Use the flower spring to ring bell 3 high in the tower.'),
+        chime(405,103,1,4,'Let Swayze play the last note. Bell 4 is on her upper heart tile.')]},
+    {name:'Signed, Sealed, Sunrise', side:0, starts:[point(51,208),point(603,189)], goalLabel:'Make the airmail pickup',
+      note:'Your envelope makes the first flight out. Inside, it says “same time tomorrow, baby?”',
+      platforms:[shore(0,208,125),ground(148,183,58,22,{belt:52}),loose(235,158,54),ground(324,184,61),
+        ground(414,144,60,22,{drift:10,speed:1.3,phase:0}),ground(511,167,47),shore(573,189,67)],
+      steps:[{...task('stamp',92,208,0,'Get a postmark','Take the winged stamp at the counter to start a nine-second express delivery.'),seconds:9},
+        task('drop',604,189,0,'Express delivery','Keep moving to the mail slot on the right. If the postmark fades, the counter gives you another.')]},
+    {name:'Stay for the Sunrise', side:0, starts:[point(54,211),point(573,183)], goalLabel:'Watch the sunrise together', reunion:true, sunrise:true,
+      platforms:[shore(0,211,113),spring(138,199,66),ground(236,132,69),ground(226,215,80),
+        ground(316,197,75,19,{lift:17,speed:1.12,phase:0,gondola:true}),ground(338,148,57),shore(421,183,219)],
+      steps:[task('reunion',573,183,0,'Find Swayze','“Just one more block, baby.” Take the spring rooftops or the low lift, then walk into Swayze’s arms.')]},
   ];
 
   const HEART = [
@@ -127,7 +201,7 @@
   }
   function makeActor(point, facing) {
     return {...point, vx:0, vy:0, facing, grounded:true, coyote:0.1, floor:null,
-      checkpoint:{...point}, lastPlatform:null};
+      checkpoint:{...point}, lastPlatform:null, lastPlatformY:null};
   }
 
   // The paper props are drawn on the same pixel grid as the characters.
@@ -270,6 +344,8 @@
       this.newInk = [];
       this.picked = this.layout.steps.map(() => false);
       this.cracks = {};
+      this.exposure = 0;
+      this.mailRun = null;
       this.keys = {left:false, right:false, jump:false, fold:false};
       this.actors = this.layout.starts.map((start, id) =>
         makeActor(start, start.x < this.layout.starts[1 - id].x ? 1 : -1));
@@ -290,6 +366,7 @@
       if(action==='jump') this.jumpBuffer=0.14;
       if(action!=='fold' || this.foldTime>0 || this.layout.reunion) return;
       this.side=1-this.side; this.foldTime=0.3; this.jumpBuffer=0;
+      this.exposure=0;
       this.sound('fold'); this.speak();
     }
     sound(kind) { this.hooks.onSound?.(kind); }
@@ -300,15 +377,17 @@
         ? task.hint
         : 'Fold to ' + NAMES[task.side] + '. ' + task.hint;
       this.hooks.onUpdate?.({level:this.level, name, character:NAMES[this.side],
-        progress:task.progress, goalLabel, hint});
+        progress:task.progress + (this.mailRun ? ' · ' + this.mailRun.remaining + 's' : ''), goalLabel, hint});
     }
     platsAt(time) {
       return this.layout.platforms.map((p,index) => ({...p, index,
-        x:p.x + (p.drift ? Math.sin(time * p.speed + p.phase) * p.drift : 0)}));
+        x:p.x + (p.drift ? Math.sin(time * p.speed + p.phase) * p.drift : 0),
+        y:p.y + (p.lift ? Math.sin(time * p.speed + p.phase) * p.lift : 0)}));
     }
     isSolid(p) {
       const crack = this.cracks[p.index];
-      return this.count >= p.needs && !(crack && this.time >= crack.fallsAt && this.time < crack.returnsAt);
+      return (p.affinity === undefined || p.affinity === this.side) && this.count >= p.needs &&
+        !(crack && this.time >= crack.fallsAt && this.time < crack.returnsAt);
     }
     solids() {
       return this.platsAt(this.time).filter(p => this.isSolid(p));
@@ -316,7 +395,7 @@
     touching(a, b, width) {
       return Math.abs(a.x - b.x) <= width && Math.abs(a.y - b.y) < 24;
     }
-    checkObjective(a, floor) {
+    checkObjective(a, floor, dt) {
       const steps = this.layout.steps;
       let task = steps[this.count];
       const previous = steps[this.count - 1];
@@ -354,18 +433,35 @@
         case 'ride':
           if (!floor?.ferry || floor.x + floor.w / 2 < x - 4) return;
           break;
+        case 'rideTop':
+          if (!floor?.gondola || floor.y > y + 2) return;
+          break;
+        case 'photo':
+          if (!a.grounded || Math.abs(a.x-x)>16 || Math.abs(a.y-y)>3 || Math.abs(a.vx)>8) {
+            this.exposure=0;
+            return;
+          }
+          this.exposure+=dt;
+          if (this.exposure<PHOTO_SECONDS) return;
+          this.exposure=0;
+          break;
         default:
           if (!nearMark(task)) return;
       }
+      if (task.kind === 'stamp') {
+        this.mailRun = {index:targetIndex, expires:this.time+task.seconds, remaining:task.seconds};
+      }
+      if (task.kind === 'chime') this.sound('chime' + task.value);
       this.picked[targetIndex] = true;
       this.count++;
       this.newInk[this.count] = this.time;
       if (this.count === steps.length) {
+        this.mailRun=null;
         this.completeFold({x, y});
         return;
       }
-      const effect = {plate:'switch', gate:'switch', switch:'switch', lantern:'switch', handoff:'pass', ride:'pass'};
-      this.sound(effect[task.kind] || 'heart');
+      const effect = {plate:'switch', gate:'switch', switch:'switch', lantern:'switch', handoff:'pass', ride:'pass', rideTop:'pass', photo:'shutter', stamp:'postmark'};
+      if (task.kind !== 'chime') this.sound(effect[task.kind] || 'heart');
       this.burst(x, y - 18, ['#fff3ce','#f47d92','#d65479'], 12);
       this.speak();
     }
@@ -376,6 +472,26 @@
           age:0,life:0.35+(i%5)*0.09,color:colors[i%colors.length],size:i%3===0?2:1});
       }
     }
+    updatePostmark() {
+      const run=this.mailRun;
+      const seconds=Math.ceil(run.expires-this.time);
+      if (seconds===run.remaining) return;
+      if (seconds>0) {
+        run.remaining=seconds;
+      } else {
+        const stamp=this.layout.steps[run.index];
+        this.count=run.index;
+        this.picked.fill(false,run.index);
+        this.side=stamp.side;
+        this.actors[this.side]=makeActor(this.layout.starts[this.side],1);
+        this.cracks={};
+        this.jumpBuffer=0;
+        this.foldTime=0;
+        this.mailRun=null;
+        this.sound('postmark');
+      }
+      this.speak();
+    }
     step(dt) {
       if(this.level<0 || this.paused || this.finished) return;
       this.time+=dt;
@@ -384,15 +500,25 @@
       this.flash=Math.max(0,this.flash-dt);
       if(this.activeEnding) {
         this.finishTime+=dt;
-        if(this.finishTime>= (this.level===9?1.65:0.82)) {
+        if(this.finishTime>= (this.layout.reunion?1.65:0.82)) {
           this.finished=true; this.hooks.onComplete?.(this.level);
         }
         return;
       }
+      if(this.mailRun) this.updatePostmark();
+      const platforms=this.solids();
+      for(const rider of this.actors) {
+        const base=this.layout.platforms[rider.floor];
+        if(!rider.grounded || !(base?.lift || base?.drift) || rider.lastPlatform===null) continue;
+        const car=platforms.find(p=>p.index===rider.floor);
+        if(!car) continue;
+        rider.x+=car.x-rider.lastPlatform;
+        rider.y+=car.y-rider.lastPlatformY;
+        rider.lastPlatform=car.x; rider.lastPlatformY=car.y;
+      }
       if(this.foldTime>0) {this.foldTime=Math.max(0,this.foldTime-dt);return;}
-      const a=this.actors[this.side], platforms=this.solids();
+      const a=this.actors[this.side];
       const current=platforms.find(p=>p.index===a.floor);
-      if(a.grounded && current?.drift && a.lastPlatform!==null) a.x+=current.x-a.lastPlatform;
       const dir=Number(this.keys.right)-Number(this.keys.left);
       a.vx=slide(a.vx,dir*150,(dir?1500:1900)*dt);
       if(dir) a.facing=dir;
@@ -403,10 +529,13 @@
       }
       this.jumpBuffer=Math.max(0,this.jumpBuffer-dt);
       a.coyote=Math.max(0,a.coyote-dt);
-      a.x=clamp(a.x+a.vx*dt,9,WIDTH-9);
+      const gust = !a.grounded && this.layout.wind?.find(z =>
+        a.x>=z.x && a.x<=z.x+z.w && a.y>=z.y && a.y<=z.y+z.h);
+      const carry = (a.grounded ? current?.belt || 0 : 0) + (gust?.dx || 0);
+      a.x=clamp(a.x+(a.vx+carry)*dt,9,WIDTH-9);
       const prevY=a.y;
-      a.vy=Math.min(470,a.vy+740*dt);
-      a.y+=a.vy*dt; a.grounded=false; a.floor=null; a.lastPlatform=null;
+      a.vy=gust?.dy<0 ? slide(a.vy,gust.dy,840*dt) : Math.min(470,a.vy+740*dt);
+      a.y+=a.vy*dt; a.grounded=false; a.floor=null; a.lastPlatform=null; a.lastPlatformY=null;
       if(a.vy>=0) {
         let surface=null;
         for(const p of platforms) {
@@ -415,20 +544,20 @@
         }
         if(surface) {
           a.y=surface.y;a.vy=0;a.grounded=true;a.coyote=0.105;
-          a.floor=surface.index;a.lastPlatform=surface.x;
+          a.floor=surface.index;a.lastPlatform=surface.x;a.lastPlatformY=surface.y;
           if(surface.crumble && (!this.cracks[surface.index] || this.time >= this.cracks[surface.index].returnsAt)) {
             this.cracks[surface.index] = {fallsAt:this.time + 0.64, returnsAt:this.time + 2.35};
             this.sound('crumble');
           }
-          if(surface.needs===0 && !surface.drift && !surface.crumble && a.x>surface.x+9 && a.x<surface.x+surface.w-9)
+          if(surface.needs===0 && !surface.drift && !surface.lift && !surface.belt && !surface.crumble && a.x>surface.x+9 && a.x<surface.x+surface.w-9)
             a.checkpoint={x:a.x,y:a.y};
         }
       }
       if(a.y>HEIGHT+38) {
-        Object.assign(a,{...a.checkpoint,vx:0,vy:0,grounded:true,coyote:0.1,floor:null,lastPlatform:null});
+        Object.assign(a,{...a.checkpoint,vx:0,vy:0,grounded:true,coyote:0.1,floor:null,lastPlatform:null,lastPlatformY:null});
         this.flash=0.23;this.sound('fall');
       }
-      this.checkObjective(a, platforms.find(p => p.index === a.floor));
+      this.checkObjective(a, platforms.find(p => p.index === a.floor), dt);
     }
     completeFold(goal) {
       this.activeEnding = true;
@@ -445,6 +574,7 @@
       const goal = reunion ? this.actors[1] : steps[steps.length - 1];
       ctx.save(); ctx.imageSmoothingEnabled=false;
       window.Scenery.background(ctx,this.level,time,this.side);
+      if(this.layout.wind) for(const zone of this.layout.wind) AfterhoursArt.wind(ctx,zone,time);
       const platforms=this.platsAt(time);
       for(const p of platforms) {
         const open = this.isSolid(p);
@@ -461,7 +591,7 @@
             const d=(time-this.newInk[p.needs])/0.9;
             for(let i=0;i<3;i++) glint(ctx,p.x+8+i*(p.w-16)/2,p.y-4-Math.round(d*6)-i%2*3);
           }
-        } else {
+        } else if(p.affinity===undefined) {
           // Tiny basting stitches show where the next fold will place its paper.
           ctx.save();ctx.globalAlpha=0.65;
           const x=Math.round(p.x);
@@ -474,6 +604,7 @@
           }
           ctx.restore();
         }
+        if(p.affinity!==undefined || p.belt || p.gondola) AfterhoursArt.platform(ctx,p,time,open);
       }
       if (reunion) {
         pixelHeart(ctx, goal.x, goal.y - 43 + Math.round(Math.sin(time * 2)), 1);
@@ -488,7 +619,10 @@
             drawTaskMarker(ctx, {...mark, kind:'gate', y:mark.y+7}, time, active, done);
           } else if (mark.kind === 'handoff' && active) {
             const partner = this.actors[1 - this.side];
-            drawTaskMarker(ctx, {...mark, kind:'carry', x:partner.x, y:partner.y-22}, time, true);
+            if (mark.item) AfterhoursArt.carried(ctx,mark.item,partner.x,partner.y-43,time);
+            else drawTaskMarker(ctx, {...mark, kind:'carry', x:partner.x, y:partner.y-22}, time, true);
+          } else if (['dumpling','chime','photo','kite','ticket','stamp','rideTop'].includes(mark.kind)) {
+            AfterhoursArt.marker(ctx,mark.kind,mark.x,mark.y,time,active,done,mark.value,active?this.exposure/PHOTO_SECONDS:0);
           } else {
             drawTaskMarker(ctx, mark, time, active, done);
           }
@@ -498,7 +632,7 @@
       for(const id of order) {
         const a=this.actors[id]; let x=a.x, y=a.y, facing=a.facing;
         let pose=a.grounded ? (id===this.side && Math.abs(a.vx)>10 && !ending?'walk':'idle'):'jump';
-        if(ending && this.level===9) {
+        if(ending && reunion) {
           const t=clamp(this.finishTime/0.5,0,1);
           if(id===this.side) {
             const approach = this.catchStart.x <= goal.x ? 1 : -1;
@@ -518,9 +652,13 @@
           rect(ctx,'#8b4e61',x-1,markerY+1,3,1);rect(ctx,'#8b4e61',x,markerY+2,1,1);
         }
       }
-      if(ending && this.level===9 && this.finishTime>0.42) {
+      if(ending && reunion && this.finishTime>0.42) {
         const lift=Math.round(clamp((this.finishTime-0.42)*9,0,8));
         pixelHeart(ctx,goal.x-2,goal.y-35-lift,1); glint(ctx,goal.x+11,goal.y-40-lift);
+        if(this.layout.sunrise && this.finishTime>0.67) {
+          const rise=Math.round((this.finishTime-0.67)*12);
+          for(const offset of [-30,-20,19,30]) glint(ctx,goal.x+offset,goal.y-30-rise-Math.abs(offset)%13,'#ffdda1');
+        }
       }
       for(const c of this.confetti) rect(ctx,c.color,c.x,c.y,c.size,c.size);
       if(this.flash>0) {

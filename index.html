@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#17182b">
   <title>P.S. I’ll Catch You — Paperheart Arcade</title>
-  <meta name="description" content="A tiny anniversary platformer. Help Axel and Swayze find each other across ten folds of a handmade card.">
+  <meta name="description" content="An anniversary platformer in twenty little chapters. Walk with Axel and Swayze from the first city lights to sunrise.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script src="sprites.js" defer></script><script src="postage.js" defer></script>
-  <script src="scenery.js" defer></script><script src="game.js" defer></script>
+  <script src="scenery.js" defer></script><script src="afterhours-art.js" defer></script><script src="game.js" defer></script>
   <script src="music.js" defer></script><script src="app.js" defer></script>
 </head>
 <body data-screen="menu">
@@ -57,7 +57,11 @@
     </div>
     <section class="chapters" id="chapters" aria-labelledby="chapters-heading" hidden>
       <button type="button" id="chapters-back" hidden>← Main menu</button>
-      <div class="chapters-head"><h2 id="chapters-heading"><i data-icon="book"></i>Chapter select</h2><span id="progress">0 of 10 complete</span></div>
+      <div class="chapters-head"><h2 id="chapters-heading"><i data-icon="book"></i>Chapter select</h2><span id="progress">0 of 20 complete</span></div>
+      <div class="walk-picker" role="group" aria-label="Choose a walk">
+        <button type="button" id="first-walk" aria-pressed="true" aria-controls="chapter-list">The Night Walk <span>01–10</span></button>
+        <button type="button" id="second-walk" aria-pressed="false" aria-controls="chapter-list">After Hours <span>11–20</span></button>
+      </div>
       <div id="chapter-list" aria-label="Choose an unlocked chapter"></div>
     </section>
   </main>
@@ -66,4 +70,5 @@
     <h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions"></div>
   </div></dialog>
   <template id="ending-note"><p>Baby, I’m so glad it’s you I get to find on the other side of every little adventure.</p><p>Here’s to more silly laughs, more hugs, and taking the long way home just to see the city lights with you.</p><p class="signature">Happy anniversary, baby. ♥</p></template>
+  <template id="sunrise-note"><p>“One more block, baby?” We said it under every streetlight. Now the sky is pink, our dumplings are gone, and I still don’t want to go home.</p><p>If we have a hundred more mornings like this, save me this spot beside you.</p><p class="signature">Happy anniversary, baby. Same walk tomorrow? ♥</p></template>
 </body></html>

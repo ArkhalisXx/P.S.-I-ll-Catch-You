@@ -85,6 +85,17 @@ kbd { display: inline-grid; place-content: center; min-height: 24px; min-width: 
 .chapters-head { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 11px; }
 .chapters h2 { display: flex; align-items: center; gap: 9px; color: var(--ink); font: 700 1.12rem/1.2 var(--serif); }
 .chapters h2 i { color: var(--rose); }
+.walk-picker { display: flex; flex-wrap: wrap; gap: 7px; margin: 0 0 12px; }
+.walk-picker button {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; min-height: 34px;
+  border: 1px solid #d9c9c3; background: #fffaf2; border-radius: 6px; font-size: .86rem; font-weight: 650;
+}
+.walk-picker button span { font: 700 .75rem/1 var(--mono); }
+.walk-picker button[aria-pressed="true"] { color: #fff9ef; background: #93455c; border-color: #93455c; }
+body[data-screen="chapters"] .walk-picker { margin: 0 0 18px; }
+body[data-screen="chapters"] .walk-picker button { color: #ecdce3; background: #282637; border-color: #615465; }
+body[data-screen="chapters"] .walk-picker button[aria-pressed="true"] { color: #372635; background: #edb3b3; border-color: #f5c5ba; }
+body[data-screen="chapters"] .walk-picker button:hover { border-color: #e1abac; }
 #progress { color: var(--muted); font-size: .875rem; }
 #chapter-list { display: grid; grid-template-columns: repeat(10, 1fr); gap: 7px; }
 .chapter {
