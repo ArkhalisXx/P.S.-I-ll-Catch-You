@@ -1,4 +1,6 @@
 (() => {
+  if (!new URLSearchParams(location.search).has("walk")) return;
+  document.getElementById("walk").hidden = false;
   const find = (id) => document.getElementById(id);
   const world = find("world");
   const objective = find("chapter-objective");
@@ -13,11 +15,11 @@
   const levelCount = names.length;
   const chaptersPerWalk = 10;
   const walkButtons = [find("first-walk"), find("second-walk")];
-  const saveKey = "paperheart-anniversary-v1";
+
 
   function readSave() {
     try {
-      const data = JSON.parse(localStorage.getItem(saveKey));
+      const data = ArcadeSave.read().walk;
       const chapters = Array.isArray(data?.completed) ? data.completed : [];
       const completed = new Set(chapters.filter((chapter) => Number.isInteger(chapter) && chapter >= 0 && chapter < levelCount));
       // A finished ten-chapter card can go directly to the newly opened market.
@@ -34,17 +36,21 @@
   }
 
   const progress = readSave();
-  let audio;
+  let audio, musicGain;
   let current = 0;
   let selectedWalk = 0;
   let result = null;
+  let chapterReward = 0;
   let screen = "menu";
   let lastFocus;
   const pressed = new Map();
 
-  function save() {
+  function save(reward = 0) {
     try {
-      localStorage.setItem(saveKey, JSON.stringify({ completed: [...progress.completed], sound: progress.sound, lastChapter: progress.lastChapter, chapterCount: levelCount }));
+      ArcadeSave.change(data => {
+        data.coins += reward;
+        data.walk = { completed: [...new Set([...data.walk.completed, ...progress.completed])], sound: progress.sound, lastChapter: progress.lastChapter, chapterCount: levelCount };
+      });
     } catch {
       // Progress remains available until the page closes.
     }
@@ -72,13 +78,18 @@
     if (!progress.sound || document.hidden) return;
     const Audio = window.AudioContext || window.webkitAudioContext;
     try {
-      if (Audio && !audio) audio = new Audio();
+      if (Audio && !audio) {
+        audio = new Audio();
+        musicGain = audio.createGain();
+        musicGain.gain.value = ArcadeSave.read().music;
+        musicGain.connect(audio.destination);
+      }
       if (!audio) return;
       if (audio.state === "running") {
-        PaperMusic.start(audio);
+        PaperMusic.start(audio, musicGain);
       } else {
         audio.resume().then(() => {
-          if (progress.sound && !document.hidden) PaperMusic.start(audio);
+          if (progress.sound && !document.hidden) PaperMusic.start(audio, musicGain);
         }).catch(() => {});
       }
     } catch {
@@ -87,7 +98,7 @@
   }
 
   function playSound(type) {
-    if (!progress.sound || audio?.state !== "running") return;
+    if (!ArcadeSave.read().effects || !progress.sound || audio?.state !== "running") return;
     const start = audio.currentTime;
     for (const [frequency, delay, span] of melodies[type] || []) {
       const osc = audio.createOscillator();
@@ -96,7 +107,7 @@
       osc.type = "sine";
       osc.frequency.value = frequency;
       gain.gain.setValueAtTime(.001, at);
-      gain.gain.exponentialRampToValueAtTime(.07, at + .018);
+      gain.gain.exponentialRampToValueAtTime(Math.max(.001, .07 * ArcadeSave.read().effects), at + .018);
       gain.gain.exponentialRampToValueAtTime(.001, at + span);
       osc.connect(gain).connect(audio.destination);
       osc.start(at);
@@ -244,13 +255,21 @@
   }
 
   function chapterComplete(level) {
+    chapterReward = progress.completed.has(level) ? 2 : 12;
     progress.completed.add(level);
     progress.lastChapter = level === levelCount - 1 ? null : level + 1;
-    save();
+    save(chapterReward);
     renderChapters();
     result = level;
     showResult();
   }
+
+  function readLetter() {
+    const letter = find("anniversary-letter").content.cloneNode(true);
+    const body = letter.textContent.trim() ? letter : paragraphs("A place for Axel’s anniversary letter.");
+    showDialog("For Swayze, from Axel", body, [["Main menu", () => enterMenu()]]);
+  }
+  find("read-letter").addEventListener("click", readLetter);
 
   function showResult() {
     if (result === chaptersPerWalk - 1) {
@@ -262,12 +281,13 @@
     }
     if (result === levelCount - 1) {
       showDialog("Stay for the sunrise", find("sunrise-note").content.cloneNode(true), [
+        ["Open Axel’s envelope", readLetter],
         ["Walk together again", () => openChapter(0)],
         ["Main menu", () => enterMenu()]
       ]);
       return;
     }
-    showDialog("Chapter complete", paragraphs(game.layout.note || names[result] + " is tucked into your card."), [
+    showDialog("Chapter complete", paragraphs(game.layout.note || names[result] + " is tucked into your card.", "+" + chapterReward + " arcade coins"), [
       ["Next chapter", () => openChapter(result + 1)],
       ["Replay chapter", () => openChapter(result)]
     ]);
@@ -349,6 +369,7 @@
 
   function enterMenu(focus = true) {
     switchScreen("menu");
+    find("read-letter").hidden = !progress.completed.has(levelCount - 1);
     releaseControls();
     game.setPaused(true);
     if (dialog.open) dialog.close();

@@ -2,7 +2,10 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"embed"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -15,9 +18,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-const title = "P.S. I’ll Catch You"
+const title = "Paperheart Arcade"
 
-//go:embed index.html style.css app.js afterhours-art.js game.js music.js postage.js scenery.js sprites.js night-walk.png Third-Party-Notices.txt
+//go:embed index.html style.css arcade.css arcade.js arcade-art.js save.js app.js afterhours-art.js game.js music.js postage.js scenery.js sprites.js night-walk.png Third-Party-Notices.txt
 var game embed.FS
 
 func main() {
@@ -57,6 +60,9 @@ func run() error {
 	defer view.Destroy()
 
 	entry := url.URL{Scheme: "file", Path: "/" + filepath.ToSlash(filepath.Join(assets, "index.html"))}
+	if err := bindSave(view, root, entry.String()); err != nil {
+		return fmt.Errorf("Prepare arcade save file: %w", err)
+	}
 	view.Navigate(entry.String())
 	view.Run()
 	return nil
@@ -88,23 +94,6 @@ func unpackGame(dir string) error {
 	return nil
 }
 
-func writeAsset(path string, data []byte) error {
-	file, err := os.CreateTemp(filepath.Dir(path), ".paperheart-*")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(file.Name())
-	_, writeErr := file.Write(data)
-	closeErr := file.Close()
-	if writeErr != nil {
-		return writeErr
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	return os.Rename(file.Name(), path)
-}
-
 func windowSize() (uint, uint) {
 	user32 := windows.NewLazySystemDLL("user32.dll")
 	metrics := user32.NewProc("GetSystemMetrics")
@@ -123,4 +112,29 @@ func showError(message string) {
 	caption, _ := windows.UTF16PtrFromString(title)
 	const errorIcon = 0x10
 	messageBox.Call(0, uintptr(unsafe.Pointer(text)), uintptr(unsafe.Pointer(caption)), errorIcon)
+}
+
+// Authorize the bundled entry page only. The bridge has one fixed save destination.
+func bindSave(view webview.WebView, root, entry string) error {
+	path := filepath.Join(root, "arcade-save.json")
+	ticket := rand.Text()
+	disk, err := readDiskSave(path)
+	if err != nil {
+		return err
+	}
+	payload, err := json.Marshal(struct {
+		Ticket string
+		Disk   json.RawMessage
+		Entry  string
+	}{ticket, disk, entry})
+	if err != nil {
+		return err
+	}
+	view.Init("(function(p){const u=new URL(location.href);u.search='';u.hash='';if(u.href===p.Entry){window.arcadeTicket=p.Ticket;window.arcadeDisk=p.Disk}})(" + string(payload) + ")")
+	return view.Bind("arcadeWrite", func(auth, raw string) error {
+		if auth != ticket {
+			return errors.New("invalid arcade save")
+		}
+		return storeDiskSave(path, []byte(raw))
+	})
 }
