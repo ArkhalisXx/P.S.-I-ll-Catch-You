@@ -20,7 +20,7 @@ import (
 
 const title = "Paperheart Arcade"
 
-//go:embed index.html style.css arcade.css arcade.js arcade-art.js save.js app.js afterhours-art.js game.js music.js postage.js scenery.js sprites.js night-walk.png Third-Party-Notices.txt
+//go:embed index.html style.css arcade.css arcade.js arcade-art.js arcade-items.js arcade-outings.js arcade-room.png arcade-kitchen.png arcade-lake.png arcade-water.png arcade-town.png arcade-hall.png save.js app.js afterhours-art.js game.js music.js postage.js scenery.js sprites.js night-walk.png Third-Party-Notices.txt
 var game embed.FS
 
 func main() {

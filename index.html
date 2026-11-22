@@ -12,7 +12,7 @@
   <script src="save.js" defer></script><script src="sprites.js" defer></script><script src="postage.js" defer></script>
   <script src="scenery.js" defer></script><script src="afterhours-art.js" defer></script><script src="game.js" defer></script>
   <script src="music.js" defer></script><script src="app.js" defer></script>
-  <script src="arcade-art.js" defer></script><script src="arcade.js" defer></script>
+  <script src="arcade-items.js" defer></script><script src="arcade-outings.js" defer></script><script src="arcade-art.js" defer></script><script src="arcade.js" defer></script>
 </head>
 <body data-screen="menu">
   <div id="walk" hidden><header class="topbar"><div class="bar-inner">
@@ -77,14 +77,27 @@
   <template id="sunrise-note"><p>“One more block, baby?” We said it under every streetlight. Now the sky is pink, our dumplings are gone, and I still don’t want to go home.</p><p>If we have a hundred more mornings like this, save me this spot beside you.</p><p class="signature">Happy anniversary, baby. Same walk tomorrow? ♥</p></template>
 </div>
 <div id="arcade" hidden>
-<header class="arc-bar"><div><a href="index.html" class="arc-brand"><span aria-hidden="true">♥</span> Paperheart Arcade</a><div class="tools"><span class="wallet">🪙 <b id="coins">0</b></span><button id="settings">Save &amp; sound</button></div></div></header>
-<main class="arc-page">
-<section id="library">
-<div class="marquee"><img src="night-walk.png" alt="Pixel city lights reflected on the water at dusk"><canvas id="cover-pair" width="72" height="37" aria-hidden="true"></canvas><div class="marquee-copy"><p>AXEL &amp; SWAYZE’S</p><h1>Paperheart<br><em>Arcade</em></h1><button data-open="walk">Play P.S. I’ll Catch You →</button></div></div>
-<div class="shelf-head"><h2>Game shelf</h2><span>Choose a game</span></div><div id="shelf"></div>
-</section>
-<section id="cabinet" hidden><button id="home">← Game shelf</button><div class="cab-title"><h1 id="mode-title"></h1><span id="mode-genre"></span></div><canvas id="stage" width="320" height="144" aria-label="Game scene"></canvas><div class="panel"><p id="cue" role="status"></p><div id="actions"></div><p id="record"></p></div></section>
+<main class="game-frame">
+  <header class="game-hud">
+    <div class="neon-sign" aria-label="Paperheart Arcade"><span aria-hidden="true">♡ PAPERHEART ♡</span><b aria-hidden="true">★ <i>ARCADE</i> ★</b></div>
+    <div class="hud-tools"><div class="wallet" title="Arcade coins"><canvas id="hud-portrait" width="32" height="26" aria-hidden="true"></canvas><canvas data-item="coin" width="24" height="24" aria-hidden="true"></canvas><b id="coins" aria-label="Arcade coins">0</b></div><button id="settings" aria-label="Save settings"><canvas data-item="save" width="24" height="24" aria-hidden="true"></canvas><span>Save</span></button><button id="sound-options" aria-label="Sound settings"><canvas data-item="sound" width="24" height="24" aria-hidden="true"></canvas><span>Sound</span></button></div>
+  </header>
+  <section id="library" aria-label="Arcade game selection">
+    <div class="showcase"><div class="ribbon ribbon-left" aria-hidden="true">★</div><div class="ribbon ribbon-right" aria-hidden="true">★</div>
+      <div id="marquee"><div class="marquee-copy"><small>Axel &amp; Swayze’s</small><h1 id="featured-title">Paperheart<br><em>Arcade</em></h1><button id="launch">▶ Play P.S. I’ll Catch You</button><p id="feature-record"></p></div><canvas id="cover-pair" width="72" height="37" aria-label="Axel and Swayze together"></canvas>
+        <div class="dial"><button id="prev-game" aria-label="Previous featured game">◀</button><span id="feature-number"></span><button id="next-game" aria-label="Next featured game">▶</button></div>
+      </div>
+    </div>
+    <section class="game-shelf" aria-labelledby="shelf-label"><h2 id="shelf-label">Game Shelf</h2><div id="shelf"></div></section>
+  </section>
+  <section id="cabinet" hidden>
+    <div class="play-view"><div class="scene-head"><button id="home">‹ Game shelf</button><h1 id="mode-title"></h1></div>
+      <div class="scene-window"><canvas id="stage" width="640" height="288" tabindex="0" aria-label="Game scene"></canvas></div>
+      <p id="record"></p>
+    </div>
+    <aside class="wood-panel controller"><h2 id="mode-genre"></h2><p id="cue" role="status"></p><div id="actions"></div></aside>
+  </section>
 </main>
-<dialog id="preferences"><form method="dialog"><button aria-label="Close settings">×</button></form><h2>Save &amp; sound</h2><label>Music <input id="music-volume" type="range" min="0" max="100"></label><label>Effects <input id="effects-volume" type="range" min="0" max="100"></label><button id="export">Export save file</button><button id="import">Import save file</button><input id="save-file" type="file" accept=".json,application/json" hidden><p id="file-status" role="status"></p></dialog>
+<dialog id="preferences" aria-labelledby="pref-title"><form method="dialog"><button aria-label="Close settings">×</button></form><h2 id="pref-title">Save &amp; sound</h2><label>Music <input id="music-volume" type="range" min="0" max="100"></label><label>Effects <input id="effects-volume" type="range" min="0" max="100"></label><button id="export">Export save file</button><button id="import">Import save file</button><input id="save-file" type="file" accept=".json,application/json" hidden><p id="file-status" role="status"></p></dialog>
 </div>
 </body></html>

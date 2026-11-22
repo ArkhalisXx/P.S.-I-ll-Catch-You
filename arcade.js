@@ -4,6 +4,7 @@
   const el = (id) => document.getElementById(id);
   const store = ArcadeSave;
   const modes = {
+    walk: ["P.S. I’ll Catch You", "Anniversary walk"],
     dock: ["Just One More Cast", "Endless fishing"],
     pancake: ["Last Pancake", "Kitchen duet"],
     date: ["Meet Me at Seven", "Map puzzle"],
@@ -21,7 +22,7 @@
   const coverPair = el("cover-pair").getContext("2d");
   Sprites.draw(coverPair, "Axel", 5, 4);
   Sprites.draw(coverPair, "Swayze", 32, 4, 1, -1);
-  const shelfCanvases = {};
+  document.querySelectorAll("[data-item]").forEach((c) => ArcadeItems(c, c.dataset.item));
   function change(fn) {
     store.change(fn);
     data = store.read();
@@ -38,22 +39,94 @@
     b.addEventListener("click", handler);
     return b;
   }
-  for (const [id, [name, genre]] of Object.entries(modes)) {
-    const card = button("", () => open(id));
+  const previews = {
+    walk: "night-walk.png",
+    dock: "arcade-lake.png",
+    pancake: "arcade-kitchen.png",
+    date: "arcade-town.png",
+    tank: "arcade-water.png",
+  };
+  const gameIds = Object.keys(modes);
+  let featured = "walk";
+  function resultLabel(id) {
+    switch (id) {
+      case "walk":
+        return data.walk.completed.length + " / 20 chapters";
+      case "dock":
+        return data.catches + " landed";
+      case "pancake":
+        return data.pancakes + " served";
+      case "date":
+        return data.dates + (data.dates === 1 ? " date" : " dates");
+      case "tank":
+        return data.tank.fish.length + " / " + data.tank.level * 4 + " fish";
+    }
+  }
+  function selectGame(id) {
+    featured = id;
+    el("marquee").dataset.game = id;
+    el("marquee").style.backgroundImage = 'url("' + previews[id] + '")';
+    el("featured-title").replaceChildren();
+    if (id === "walk") {
+      const em = document.createElement("em");
+      em.textContent = "Arcade";
+      el("featured-title").append("Paperheart", document.createElement("br"), em);
+    } else el("featured-title").textContent = modes[id][0];
+    el("cover-pair").hidden = id !== "walk";
+    el("feature-record").textContent = resultLabel(id);
+    el("launch").textContent = "▶ Play " + modes[id][0];
+    el("feature-number").textContent = gameIds.indexOf(id) + 1 + " / " + gameIds.length;
+    el("shelf")
+      .querySelectorAll("button")
+      .forEach((b) => b.classList.toggle("selected", b.dataset.game === id));
+  }
+  function turnDial(step) {
+    selectGame(gameIds[(gameIds.indexOf(featured) + step + gameIds.length) % gameIds.length]);
+  }
+  el("prev-game").onclick = () => turnDial(-1);
+  el("next-game").onclick = () => turnDial(1);
+  el("launch").onclick = () => (featured === "walk" ? location.assign("?walk") : open(featured));
+  Sprites.draw(el("hud-portrait").getContext("2d"), "Swayze", 0, 0);
+  for (const id of gameIds.slice(1)) {
+    const [name, genre] = modes[id];
+    const card = button("", () => {
+      selectGame(id);
+      open(id);
+    });
     card.className = "cartridge";
-    const screen = document.createElement("canvas");
-    screen.width = 320;
-    screen.height = 144;
-    screen.ariaHidden = "true";
-    shelfCanvases[id] = screen;
-    const title = document.createElement("strong");
-    title.textContent = name;
+    card.dataset.game = id;
+    card.setAttribute("aria-label", "Play " + name);
+    const image = document.createElement("canvas");
+    image.width = 448;
+    image.height = 202;
+    image.setAttribute("aria-hidden", "true");
     const type = document.createElement("small");
     type.textContent = genre;
-    card.append(screen, type, title);
+    const title = document.createElement("strong");
+    title.textContent = name;
+    const footer = document.createElement("span");
+    footer.className = "cart-foot";
+    const stat = document.createElement("span");
+    stat.className = "cart-stat";
+    const arrow = document.createElement("b");
+    arrow.textContent = "▶";
+    arrow.setAttribute("aria-hidden", "true");
+    footer.append(stat, arrow);
+    card.append(image, type, title, footer);
     el("shelf").append(card);
   }
+  function drawCartridges() {
+    for (const card of el("shelf").children) {
+      const id = card.dataset.game;
+      const sample = id === "pancake" ? { phase: "top", served: 3 } : id === "date" ? { pov: "Swayze" } : {};
+      drawArcadeScene(card.querySelector("canvas"), id, 1, data, sample);
+    }
+  }
+  Promise.all(Object.values(arcadeBackdrops).map((image) => image.decode().catch(() => {}))).then(
+    drawCartridges,
+  );
   function library() {
+    const lastMode = mode;
     cancelAnimationFrame(frame);
     mode = "";
     held = false;
@@ -62,10 +135,17 @@
     silence();
     el("library").hidden = false;
     el("cabinet").hidden = true;
-    for (const [id, c] of Object.entries(shelfCanvases)) drawArcadeScene(c, id, 1, data);
+    for (const card of el("shelf").children)
+      card.querySelector(".cart-stat").textContent = resultLabel(card.dataset.game);
+    drawCartridges();
+    selectGame(featured);
+    if (lastMode)
+      el("shelf")
+        .querySelector('[data-game="' + lastMode + '"]')
+        ?.focus({ preventScroll: true });
   }
   el("home").onclick = library;
-  document.querySelector('[data-open="walk"]').onclick = () => location.assign("?walk");
+
   const tracks = {
     dock: [0.52, "triangle", [74, 0, 81, 78, 0, 76, 74, 0, 71, 0, 74, 0, 69, 0, 0, 0]],
     pancake: [0.19, "square", [72, 76, 0, 79, 76, 0, 81, 79, 72, 0, 74, 77, 76, 74, 0, 67]],
@@ -123,6 +203,8 @@
     data = store.read();
     balance();
     mode = id;
+    el("cabinet").dataset.mode = id;
+    el("cabinet").classList.remove("inspect");
     play = {};
     elapsed = 0;
     previous = 0;
@@ -140,112 +222,286 @@
     frame = requestAnimationFrame(loop);
     el("home").focus();
   }
-  function kitchen(message = "Swayze flips. Axel catches. Land both in the gold zone.") {
-    play.phase = "ready";
+  const recipes = [
+    { name: "Sunday honey", layers: ["golden"], topping: "Honey", pay: 8 },
+    { name: "Berry short stack", layers: ["light", "golden"], topping: "Berries", pay: 16 },
+    { name: "Cocoa at midnight", layers: ["deep", "light"], topping: "Cocoa", pay: 18 },
+    { name: "Three little suns", layers: ["light", "golden", "deep"], topping: "Honey", pay: 25 },
+    { name: "Pink sunrise", layers: ["golden", "light", "golden"], topping: "Berries", pay: 24 },
+    { name: "After-hours single", layers: ["deep"], topping: "Cocoa", pay: 10 },
+  ];
+  const heatWindows = { light: [0.24, 0.48], golden: [0.45, 0.71], deep: [0.66, 0.92] };
+  const lanes = ["Left", "Middle", "Right"];
+  function kitchen(message = "Pick an order for Swayze. A larger stack earns more coins.") {
+    play.phase = "orders";
+    const first = data.pancakes % recipes.length;
+    const options = [recipes[first], recipes[(first + 1) % recipes.length]];
     show(
       message,
-      [
-        button("Pour batter", () => {
-          play.phase = "flip";
-          play.clock = 0;
-          play.meter = 0;
-          show("Swayze · Flip when the pointer reaches gold.", [button("Flip pancake", timePancake)]);
+      options.map((recipe) =>
+        button(recipe.name + " · " + recipe.pay + " coins", () => {
+          play.recipe = recipe;
+          play.served = 0;
+          play.pans = [null, null];
+          play.clean = true;
+          play.plate = 1;
+          play.phase = "stove";
+          stove("Use either pan. Fill the second while the first cooks, or work one layer at a time.");
         }),
-      ],
-      `Served ${data.pancakes} · Best streak ${data.best}`,
+      ),
+      `Orders served ${data.pancakes} · Best streak ${data.best}`,
     );
   }
-  function timePancake() {
-    const good = Math.abs(play.meter - 0.5) <= 0.19;
-    if (!good) {
+  function ticket() {
+    const r = play.recipe;
+    return r.name + " · " + r.layers.join(" / ") + " · " + r.topping;
+  }
+  function stove(message) {
+    play.phase = "stove";
+    const actions = play.pans.map((pan, index) => {
+      const side = index ? "right" : "left";
+      const next = play.recipe.layers.findIndex(
+        (_, i) => i >= play.served && !play.pans.some((p) => p?.layer === i),
+      );
+      if (!pan)
+        return button(
+          "Pour " + side,
+          () => {
+            play.panSide = index;
+            play.pans[index] = { layer: next, heat: 0 };
+            stove("Toss each layer in order when its pointer reaches the green band.");
+          },
+          next < 0,
+        );
+      return button(
+        "Toss " + side + " · " + play.recipe.layers[pan.layer],
+        () => {
+          const [low, high] = heatWindows[play.recipe.layers[pan.layer]];
+          if (pan.heat < low || pan.heat > high) {
+            discard(index, pan.heat < low ? "Too pale. Pour that layer again." : "That one got too dark.");
+            return;
+          }
+          play.panSide = index;
+          play.phase = "flight";
+          play.clock = 0;
+          play.landing = (play.served + index + Math.floor(pan.heat * 10)) % 3;
+          play.plate = (play.landing + 1) % 3;
+          catchPanel();
+        },
+        pan.layer !== play.served,
+      );
+    });
+    show(message, actions, ticket());
+  }
+  function discard(index, message) {
+    play.pans[index] = null;
+    if (play.clean)
       change((s) => {
         s.streak = 0;
       });
-      effect(49);
-      kitchen("Just missed! Baby, I’ll get another plate.");
-      return;
-    }
-    if (play.phase === "flip") {
-      play.phase = "catch";
-      play.clock = 0;
-      play.meter = 0;
-      effect(72);
-      show("Axel · Slide the plate into the gold zone under her pancake.", [
-        button("Catch on plate", timePancake),
-      ]);
-    } else {
-      change((s) => {
-        s.coins += 8;
-        s.pancakes++;
-        s.streak++;
-        s.best = Math.max(s.best, s.streak);
+    play.clean = false;
+    effect(48);
+    stove(message);
+  }
+  function catchPanel() {
+    const actions = lanes.map((lane, i) => {
+      const b = button(lane + " plate", () => {
+        play.plate = i;
+        effect(65);
+        catchPanel();
       });
-      effect();
-      kitchen("Breakfast served! +8 coins.");
+      b.setAttribute("aria-pressed", String(play.plate === i));
+      return b;
+    });
+    show("Axel · Slide under the falling pancake. Aim for the steam ring.", actions, ticket());
+  }
+  function finishStack(message = "Finish the order with the topping on the ticket.") {
+    play.phase = "top";
+    show(
+      message,
+      ["Honey", "Berries", "Cocoa"].map((t) =>
+        button(t, () => {
+          if (t !== play.recipe.topping) {
+            finishStack("Check the ticket, baby. They asked for " + play.recipe.topping + ".");
+            return;
+          }
+          const pay = play.recipe.pay + (play.clean ? 2 : 0);
+          change((s) => {
+            s.coins += pay;
+            s.pancakes++;
+            if (play.clean) s.streak++;
+            s.best = Math.max(s.best, s.streak);
+          });
+          effect();
+          kitchen(
+            play.recipe.name +
+              " served! +" +
+              pay +
+              " coins" +
+              (play.clean ? " including a clean-stack tip." : "."),
+          );
+        }),
+      ),
+      ticket(),
+    );
+  }
+  function cook(dt) {
+    const panX = play.panSide === 1 ? 117 : 51;
+    const plateX = [169, 221, 271][play.plate ?? 1];
+    play.chefX = (play.chefX ?? 51) + (panX - (play.chefX ?? 51)) * Math.min(1, dt * 8);
+    play.runnerX = (play.runnerX ?? 221) + (plateX - (play.runnerX ?? 221)) * Math.min(1, dt * 8);
+    if (play.phase === "flight") {
+      if (play.clock < 2.2) return;
+      if (play.plate !== play.landing) {
+        discard(play.panSide, "It missed the plate. We can redo that layer.");
+        return;
+      }
+      play.pans[play.panSide] = null;
+      play.served++;
+      effect(76);
+      if (play.served === play.recipe.layers.length) finishStack();
+      else stove("Layer caught! Next up: " + play.recipe.layers[play.served] + ".");
+    } else if (play.phase === "stove") {
+      for (const [index, pan] of play.pans.entries()) {
+        if (!pan) continue;
+        pan.heat += dt * (index ? 0.13 : 0.1);
+        if (pan.heat > 1) {
+          discard(index, "A little smoky! Refill the empty pan.");
+        }
+      }
     }
   }
-  const places = ["Pier", "Bakery", "Clock", "Park", "Bridge", "Books", "Florist", "Café", "Tram"];
-  function meeting() {
-    // The two notes specify a crossing, each using a different nearby landmark.
-    return [7, 2, 3, 8, 1, 6, 5, 0, 4][data.dates % 9];
-  }
+
   function map(message = "") {
-    const goal = meeting(),
-      row = Math.floor(goal / 3),
-      col = goal % 3;
-    const axel = play.pov === "Axel";
-    play.receiptSpot = row * 3 + ((col + 1) % 3);
-    const clue = axel
-      ? `Axel’s receipt · “Our place is on the east–west street through ${places[play.receiptSpot]}, baby.”`
-      : `Swayze’s map · “We said the north–south avenue through ${places[((row + 1) % 3) * 3 + col]}.”`;
-    const actions = [
-      button(axel ? "Back to Swayze" : "Check Axel’s receipt", () => {
-        play.pov = axel ? "Swayze" : "Axel";
-        map();
-      }),
-    ];
-    if (!axel) {
-      for (const [label, delta, can] of [
-        ["← West", -1, data.route % 3 > 0],
-        ["↑ North", -3, data.route >= 3],
-        ["↓ South", 3, data.route < 6],
-        ["→ East", 1, data.route % 3 < 2],
+    const card = Outings.plan(data.dates),
+      trip = data.outing || Outings.fresh(),
+      pos = data.route;
+    const here = Outings.places[pos],
+      axel = play.pov === "Axel";
+    play.plan = card;
+    play.trip = trip;
+    play.receiptSpot = card.closed[1];
+    const nextStops = card.stops
+      .map((spot, i) => ({ spot, i }))
+      .filter(({ i }) => !(trip.mask & (1 << i)) && (!card.ordered || i === 0 || trip.mask & 1));
+    const actions = [];
+    const clue =
+      trip.mask === 3
+        ? "Meet Axel " + card.clue + "."
+        : nextStops.map(({ spot, i }) => card.tasks[i] + " at the " + Outings.places[spot]).join(" or ") +
+          ".";
+    if (axel) {
+      actions.push(
+        button("Back to Swayze", () => {
+          play.pov = "Swayze";
+          map();
+        }),
+      );
+      if (!trip.opened)
+        actions.push(
+          button("Open the crossing", () => {
+            change((s) => {
+              (s.outing ??= Outings.fresh()).opened = true;
+            });
+            effect(70);
+            map("Crossing open. You can walk straight through, baby.");
+          }),
+        );
+    } else {
+      for (const { spot, i } of nextStops)
+        if (spot === pos)
+          actions.push(
+            button(card.tasks[i], () => {
+              change((s) => {
+                (s.outing ??= Outings.fresh()).mask |= 1 << i;
+              });
+              effect(82);
+              map("In your journal: " + card.bag[i] + ".");
+            }),
+          );
+      if (trip.mask === 3)
+        actions.push(
+          button("Meet here", () => {
+            if (pos !== card.goal) {
+              map("No sign of Axel. Check his clue again.");
+              return;
+            }
+            const pay = trip.steps <= card.budget ? 20 : 14;
+            change((s) => {
+              s.coins += pay;
+              s.dates++;
+              s.route = 0;
+              delete s.outing;
+            });
+            effect();
+            play.pov = "Swayze";
+            map("Together at the " + here + "! +" + pay + " coins. ");
+          }),
+        );
+      actions.push(
+        button("Call Axel", () => {
+          play.pov = "Axel";
+          map();
+        }),
+      );
+      for (const [label, delta] of [
+        ["← West", -1],
+        ["↑ North", -3],
+        ["↓ South", 3],
+        ["→ East", 1],
       ]) {
+        const to = pos + delta;
         actions.push(
           button(
             label,
-            () => {
-              change((s) => {
-                s.route += delta;
-              });
-              map();
-            },
-            !can,
+            () => walkTo(to),
+            to < 0 || to > 8 || Outings.distance(pos, to) !== 1 || Outings.blocked(pos, to, card, trip),
           ),
         );
       }
-      actions.push(
-        button("Meet here", () => {
-          if (data.route !== meeting()) {
-            map("Two different streets. Check both notes.");
-            return;
-          }
-          const name = places[data.route];
-          change((s) => {
-            s.coins += 14;
-            s.dates++;
-            s.route = 0;
-          });
-          effect();
-          map(`Date at the ${name}! +14 coins. Next invitation:`);
-        }),
-      );
+      if (!trip.rode && [0, 8].includes(pos))
+        actions.push(button("Tram to " + Outings.places[8 - pos], () => walkTo(8 - pos, true)));
     }
+    const clock = Math.min(23 * 60 + 59, 19 * 60 + 5 * (trip.steps - card.budget));
+    const time = (Math.floor(clock / 60) % 12) + ":" + String(clock % 60).padStart(2, "0");
+    const hint = axel
+      ? trip.opened
+        ? "I’ll meet you " + card.clue + ", baby."
+        : "The crossing between " +
+          card.closed.map((n) => Outings.places[n]).join(" and ") +
+          " is closed. I can open it from here."
+      : clue + " Each move takes five minutes. Meet by seven for a tip.";
     show(
-      [message, clue].filter(Boolean).join(" "),
+      [message, hint].filter(Boolean).join(" "),
       actions,
-      `${axel ? "Axel" : "Swayze"} at the ${places[axel ? play.receiptSpot : data.route]} · Dates together ${data.dates}`,
+      card.title +
+        " · " +
+        time +
+        " PM · " +
+        (axel ? "Axel" : here) +
+        " · " +
+        [0, 1].filter((i) => trip.mask & (1 << i)).length +
+        "/2 errands",
     );
+  }
+  function walkTo(to, tram = false) {
+    const from = data.route,
+      trip = data.outing || Outings.fresh(),
+      card = play.plan;
+    if (play.pov === "Axel" || to < 0 || to > 8) return;
+    if (tram) {
+      if (trip.rode || ![0, 8].includes(from) || to !== 8 - from) return;
+    } else if (Outings.distance(from, to) !== 1 || Outings.blocked(from, to, card, trip)) return;
+    change((s) => {
+      const trip = (s.outing ??= Outings.fresh());
+      trip.steps++;
+      if (tram) trip.rode = true;
+      s.route = to;
+    });
+    play.departure = from;
+    play.moveStarted = elapsed;
+    effect(tram ? 77 : 63);
+    map();
   }
   const value = { Bluegill: 8, Sunfish: 12, Perch: 16 };
   function dock(message = "Swayze · Choose where to cast. Watch the float for a bite.") {
@@ -333,7 +589,12 @@
     const t = data.tank,
       cap = t.level * 4,
       room = t.fish.length < cap;
-    const actions = [];
+    const actions = [
+      button(el("cabinet").classList.contains("inspect") ? "View aquarium room" : "Inspect tank", () => {
+        el("cabinet").classList.toggle("inspect");
+        aquarium();
+      }),
+    ];
     function buy(label, cost, update, allowed = true) {
       actions.push(
         button(
@@ -402,6 +663,7 @@
       actions.push(
         button(`Move ${d.kind} ${i + 1}`, () => {
           play.moving = i;
+          el("cabinet").classList.add("inspect");
           aquarium("Tap a spot on the tank floor, or use the placement buttons.");
         }),
       ),
@@ -427,16 +689,21 @@
     aquarium("Decoration placed.");
   }
   el("stage").onclick = (e) => {
+    if (mode === "date") {
+      const r = el("stage").getBoundingClientRect();
+      const to =
+        Math.min(2, Math.floor((3 * (e.clientX - r.left)) / r.width)) +
+        3 * Math.min(2, Math.floor((3 * (e.clientY - r.top)) / r.height));
+      walkTo(to);
+      return;
+    }
     if (mode !== "tank" || !Number.isInteger(play.moving)) return;
     const r = el("stage").getBoundingClientRect();
     place(Math.max(0, Math.min(300, Math.round(((e.clientX - r.left) * 320) / r.width))));
   };
   function tick(dt) {
     play.clock = (play.clock || 0) + dt;
-    if (mode === "pancake" && ["flip", "catch"].includes(play.phase)) {
-      const speed = play.phase === "flip" ? 1 : 1.35;
-      play.meter = (1 - Math.cos(play.clock * (3 + Math.min(2, data.streak * 0.12)) * speed)) / 2;
-    }
+    if (mode === "pancake") cook(dt);
     if (mode !== "dock") return;
     if (play.phase === "waiting" && play.clock >= play.delay) bite();
     else if (play.phase === "bite" && play.clock > 3) dock("It slipped away. Try another cast.");
@@ -472,18 +739,28 @@
       music(dt);
     }
     drawArcadeScene(el("stage"), mode, elapsed, data, play);
-    if (mode === "pancake" && ["flip", "catch"].includes(play.phase)) {
-      const c = el("stage").getContext("2d");
-      c.fillStyle = "#403847";
-      c.fillRect(85, 123, 150, 10);
-      c.fillStyle = "#ffce80";
-      c.fillRect(132, 125, 56, 6);
-      c.fillStyle = "#fffbe3";
-      c.fillRect(85 + play.meter * 146, 120, 4, 15);
-    }
     frame = requestAnimationFrame(loop);
   }
   document.addEventListener("keydown", (e) => {
+    if (!settings.open && !e.altKey && !e.ctrlKey && !e.metaKey) {
+      if (!mode && ["ArrowLeft", "ArrowRight"].includes(e.code)) {
+        e.preventDefault();
+        turnDial(e.code === "ArrowLeft" ? -1 : 1);
+        return;
+      }
+      const dirs = { ArrowLeft: -1, ArrowUp: -3, ArrowDown: 3, ArrowRight: 1 };
+      if (mode === "date" && e.code in dirs) {
+        e.preventDefault();
+        if (!e.repeat) walkTo(data.route + dirs[e.code]);
+        return;
+      }
+      if (mode === "pancake" && play.phase === "flight" && ["ArrowLeft", "ArrowRight"].includes(e.code)) {
+        e.preventDefault();
+        play.plate = Math.min(2, Math.max(0, play.plate + dirs[e.code]));
+        catchPanel();
+        return;
+      }
+    }
     if (
       !settings.open &&
       mode === "dock" &&
@@ -507,6 +784,10 @@
     el("file-status").textContent = "";
     for (const k of ["music", "effects"]) el(k + "-volume").value = Math.round(data[k] * 100);
     settings.showModal();
+  };
+  el("sound-options").onclick = () => {
+    el("settings").onclick();
+    el("music-volume").focus();
   };
   for (const k of ["music", "effects"])
     el(k + "-volume").oninput = (e) =>

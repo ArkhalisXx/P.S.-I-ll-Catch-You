@@ -43,6 +43,14 @@
       !w.completed.every((n) => integer(n) && n < 20) ||
       !(w.lastChapter == null || (integer(w.lastChapter) && w.lastChapter < 20)) ||
       !(d.pending === null || species.includes(d.pending)) ||
+      (d.outing != null &&
+        !(
+          integer(d.outing.steps) &&
+          integer(d.outing.mask) &&
+          d.outing.mask <= 3 &&
+          typeof d.outing.opened === "boolean" &&
+          typeof d.outing.rode === "boolean"
+        )) ||
       d.route >= 9
     )
       throw Error("This file is not a valid Paperheart Arcade save.");
