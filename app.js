@@ -16,10 +16,10 @@
       const chapters = Array.isArray(data?.completed) ? data.completed : [];
       return {
         completed: new Set(chapters.filter((chapter) => Number.isInteger(chapter) && chapter >= 0 && chapter < levelCount)),
-        sound: data?.sound === true
+        sound: data?.sound !== false
       };
     } catch {
-      return { completed: new Set(), sound: false };
+      return { completed: new Set(), sound: true };
     }
   }
 
@@ -48,11 +48,18 @@
   };
 
   function wakeSound() {
-    if (!progress.sound) return;
+    if (!progress.sound || document.hidden) return;
     const Audio = window.AudioContext || window.webkitAudioContext;
     try {
       if (Audio && !audio) audio = new Audio();
-      if (audio?.state === "suspended") audio.resume().catch(() => {});
+      if (!audio) return;
+      if (audio.state === "running") {
+        PaperMusic.start(audio);
+      } else {
+        audio.resume().then(() => {
+          if (progress.sound && !document.hidden) PaperMusic.start(audio);
+        }).catch(() => {});
+      }
     } catch {
       // Play also works when audio is unavailable.
     }
@@ -294,7 +301,8 @@
 
   soundButton.addEventListener("click", () => {
     progress.sound = !progress.sound;
-    wakeSound();
+    if (progress.sound) wakeSound();
+    else PaperMusic.stop();
     save();
     renderSound();
     if (audio?.state === "running") playSound("heart");
@@ -321,8 +329,16 @@
   });
   document.addEventListener("keyup", (event) => clearInput(event.code));
   window.addEventListener("blur", releaseControls);
+  document.addEventListener("pointerup", (event) => {
+    if (!soundButton.contains(event.target)) wakeSound();
+  });
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) releaseControls();
+    if (document.hidden) {
+      releaseControls();
+      PaperMusic.stop();
+    } else if (audio) {
+      wakeSound();
+    }
   });
 
   for (const button of document.querySelectorAll("[data-action]")) {

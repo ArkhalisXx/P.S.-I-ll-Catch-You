@@ -7,9 +7,9 @@
     B: "#24232f", A: "#333340", H: "#474352",
     t: "#424354", m: "#555363", g: "#716473",
     f: "#ffcdab", l: "#ffe0bd", s: "#e5a084", c: "#f08f93", w: "#fff4d9",
-    o: "#4f414f", u: "#26746d", v: "#459d8b", n: "#81c3a1", j: "#aaddb7",
-    e: "#a44460", p: "#da6178", r: "#f38898", i: "#ffb0a8",
-    z: "#80504c", y: "#e8ae68"
+    C: "#20212a", U: "#30323c", V: "#494b54", L: "#666974", q: "#ddd2bc",
+    E: "#8c526b", P: "#b8788a", R: "#d7939e", I: "#e8b1b0",
+    o: "#4f414f", z: "#80504c"
   };
 
   const heads = {
@@ -61,47 +61,39 @@
     ]
   };
 
-  const ribbon = [
-    "keek   kkk",
-    "kripe kepk",
-    "krippekirk",
-    " keppwprrk",
-    "  kkpeekk",
-    "    kpkk",
-    "    kek"
-  ];
-
+  // Folded hoods, drawcords, hand pockets and the ribbing along each bottom hem.
   const bodies = {
     Axel: [
-      "   kuuuuuuk",
-      "  kvnvvnnnuk",
-      " kvnnuwwuvvuk",
-      " kvnvuwynvvuk",
-      " kvvvuwunvvuk",
-      "  kuuuwwuvuuk",
-      "  ktttootttk",
-      "   kttkkttk"
+      "  kVVCCCCVVk",
+      " kVLUUCCUULVk",
+      " kUUVqUUqVUUk",
+      " kUUUqUUqUUUk",
+      " kUUUVUUUVUUk",
+      " kUUVVUUUUVUk",
+      " kUUCVVVVVCUk",
+      "  kCVUUUUVCk",
+      "   kCCCCCCk"
     ],
     Swayze: [
-      "   kssffsk",
-      "  kerwkkwrek",
-      " kpripppprrpk",
-      "  kpripyprek",
-      "   keppppeek",
-      "  kprriiprrpk",
-      " kprriprprirpk",
-      " kpwiiwiwwiwpk",
-      "  keeeeeeeeek"
+      "  kRREEEERRk",
+      " kRIPPEEPPIRk",
+      " kPPRqPPqRPPk",
+      " kPRPqPPqPRPk",
+      " kPRRPPPPPRPk",
+      " kPPRRPPPPRPk",
+      " kPPEIRRRREPk",
+      "  kEPRPPPRPEk",
+      "   kEEEEEEk"
     ]
   };
 
   const sleeves = {
-    Axel: [" kk", "kvnk", "kuvk", "kusk", " kfk", "  k"],
-    Swayze: [" kk", "krik", "kprk", " ksk", " kfk", "  k"]
+    Axel: [" kk", "kVUk", "kUUk", "kUCk", " ksk", "  k"],
+    Swayze: [" kk", "kRPk", "kPPk", "kPEk", " ksk", "  k"]
   };
   const boots = {
     Axel: ["kttk", "ktmk", "kzzzk", "kbaak", " kkkk"],
-    Swayze: ["ksfk", "kwwk", "kepk", "krrpk", " kkkk"]
+    Swayze: ["kttk", "ktmk", "kPEEk", "kIqqk", " kkkk"]
   };
 
   function ink(ctx, rows, x, y, flip = false) {
@@ -124,8 +116,7 @@
     const canvas = document.createElement("canvas");
     canvas.width = canvas.height = 32;
     const ctx = canvas.getContext("2d");
-    const swayze = name === "Swayze";
-    const torsoY = (swayze ? 19 : 20) + bob;
+    const torsoY = 20 + bob;
     const footY = jumping ? 26 : 27;
     ink(ctx, boots[name], 10 - stride - 2 * Number(jumping), footY - Number(stride < 0));
     ink(ctx, boots[name], 18 + stride + 2 * Number(jumping), footY - Number(stride > 0) - Number(jumping));
@@ -133,14 +124,8 @@
     ink(ctx, sleeves[name], 7 - Number(jumping), sleeveY + stride);
     ink(ctx, sleeves[name], 24 + Number(jumping), sleeveY - stride, true);
     ink(ctx, bodies[name], 9, torsoY);
-    if (!swayze) {
-      const scarf = jumping ? ["kvvuk", "knnvvuuk", " kkuukkk"] : ["   kvvuk", "  kvnvuk", " kvnvuk", "  kuukk", "   kk"];
-      ink(ctx, scarf, jumping ? 4 : 5, torsoY);
-      ink(ctx, ["kuvvvnuk", " kvnjuuk"], 12, torsoY);
-    }
     const headY = 1 + bob;
     ink(ctx, heads[name], 0, headY);
-    if (swayze) ink(ctx, ribbon, 18, headY + 2);
     if (!blink) {
       ink(ctx, ["wk", "ko"], 11, headY + 13);
       ink(ctx, ["wk", "ko"], 18, headY + 13);
