@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f8f4ed">
+  <meta name="theme-color" content="#17182b">
   <title>P.S. I’ll Catch You — Paperheart Arcade</title>
   <meta name="description" content="A tiny anniversary platformer. Help Axel and Swayze find each other across ten folds of a handmade card.">
   <link rel="icon" href="data:,">
@@ -12,20 +12,38 @@
   <script src="scenery.js" defer></script><script src="game.js" defer></script>
   <script src="music.js" defer></script><script src="app.js" defer></script>
 </head>
-<body>
+<body data-screen="menu">
   <header class="topbar"><div class="bar-inner">
     <div class="brand"><canvas class="logo-envelope" width="30" height="25" data-art="envelope" aria-hidden="true"></canvas><span>Paperheart <b>Arcade</b></span></div>
     <nav aria-label="Game settings"><button id="sound" type="button" aria-pressed="true" title="Toggle music and sound effects"><i data-icon="sound"></i><span>Sound on</span></button><button id="help" type="button"><i data-icon="help"></i><span>How to play</span></button></nav>
   </div></header>
   <main class="page">
+    <section id="title-screen" aria-label="Main menu">
+      <div class="cover-frame">
+        <div class="cover-scene">
+          <img src="night-walk.png" width="768" height="432" alt="Moonlight on a riverside walk, with a bench, a glowing streetlamp and the city reflected in the water.">
+          <canvas id="menu-couple" width="80" height="46" role="img" aria-label="Axel and Swayze together under the city lights"></canvas>
+        </div>
+        <div class="cover-copy">
+          <div class="cover-edition"><canvas data-art="heart" width="16" height="16" aria-hidden="true"></canvas> Anniversary edition</div>
+          <h1>P.S. I’ll <br><em>Catch You</em></h1>
+          <p>Take the long way home with <strong>Axel &amp; Swayze</strong>.</p>
+          <div class="cover-actions">
+            <button type="button" id="menu-start"><span id="start-label">Start our walk</span><span class="pixel-arrow" aria-hidden="true"></span></button>
+            <button type="button" id="menu-chapters" aria-controls="chapters">Choose a chapter</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div id="play-screen" hidden>
     <header class="masthead">
       <div><div class="edition"><span></span>ANNIVERSARY EDITION</div><h1>P.S. I’ll <em>Catch You</em></h1><p>A little paper adventure starring <strong>Axel</strong> &amp; <strong>Swayze</strong>.</p></div>
       <canvas class="postmark" width="150" height="62" data-art="postmark" aria-hidden="true"></canvas>
     </header>
     <section class="airmail" aria-label="Platformer game">
       <div class="game-shell">
-        <div class="game-titlebar"><div class="chapter-title"><span id="chapter-number">CH. 01</span><h2 id="chapter-title">The First Fold</h2></div>
-          <div class="game-actions"><button type="button" id="restart" aria-label="Restart current chapter" title="Restart chapter"><i data-icon="restart"></i></button><button type="button" id="pause" aria-label="Pause game" title="Pause game (P)"><i data-icon="pause"></i></button></div>
+        <div class="game-titlebar"><div class="chapter-title"><span id="chapter-number">CH. 01</span><div><h2 id="chapter-title">The First Fold</h2><p id="chapter-location"></p></div></div>
+          <div class="game-actions"><button type="button" id="back-to-menu">Menu</button><button type="button" id="restart" aria-label="Restart current chapter" title="Restart chapter"><i data-icon="restart"></i></button><button type="button" id="pause" aria-label="Pause game" title="Pause game (P)"><i data-icon="pause"></i></button></div>
         </div>
         <div class="viewport"><canvas id="world" width="640" height="272" tabindex="0" aria-label="Platformer. Arrow keys move, Space jumps, and X folds the card." aria-describedby="hint"></canvas>
           <div class="hud player"><span class="status-light"></span><span id="player">Axel</span></div>
@@ -36,11 +54,16 @@
     </section>
     <div class="control-strip" aria-label="Keyboard controls"><div><kbd>←</kbd><kbd>→</kbd><span>Move</span></div><div><kbd>Space</kbd><span>Jump</span></div><div><kbd>X</kbd><span>Fold &amp; switch</span></div><div><kbd>P</kbd><span>Pause</span></div></div>
     <div class="touch-controls" aria-label="Touch controls"><div><button type="button" data-action="left" aria-label="Move left">◀</button><button type="button" data-action="right" aria-label="Move right">▶</button></div><div><button type="button" data-action="fold">Fold</button><button type="button" data-action="jump">Jump</button></div></div>
-    <section class="chapters" aria-labelledby="chapters-heading"><div class="chapters-head"><h2 id="chapters-heading"><i data-icon="book"></i>Chapter select</h2><span id="progress">0 of 10 complete</span></div><div id="chapter-list" aria-label="Choose an unlocked chapter"></div></section>
+    </div>
+    <section class="chapters" id="chapters" aria-labelledby="chapters-heading" hidden>
+      <button type="button" id="chapters-back" hidden>← Main menu</button>
+      <div class="chapters-head"><h2 id="chapters-heading"><i data-icon="book"></i>Chapter select</h2><span id="progress">0 of 10 complete</span></div>
+      <div id="chapter-list" aria-label="Choose an unlocked chapter"></div>
+    </section>
   </main>
   <dialog id="dialog" aria-labelledby="dialog-title"><div class="dialog-inner">
     <div class="dialog-top"><canvas data-art="envelope" width="30" height="25" aria-hidden="true"></canvas><button id="dialog-close" type="button" aria-label="Close"><i data-icon="close"></i></button></div>
     <h2 id="dialog-title"></h2><div id="dialog-body"></div><div id="dialog-actions"></div>
   </div></dialog>
-  <template id="ending-note"><p>Baby, I’m so glad it’s you I get to find on the other side of every little adventure.</p><p>Here’s to more silly laughs, more hugs, and more days with you.</p><p class="signature">Happy anniversary, baby. ♥</p></template>
+  <template id="ending-note"><p>Baby, I’m so glad it’s you I get to find on the other side of every little adventure.</p><p>Here’s to more silly laughs, more hugs, and taking the long way home just to see the city lights with you.</p><p class="signature">Happy anniversary, baby. ♥</p></template>
 </body></html>

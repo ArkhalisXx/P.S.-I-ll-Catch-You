@@ -7,7 +7,9 @@
   const dialogBody = find("dialog-body");
   const dialogActions = find("dialog-actions");
   const soundButton = find("sound");
+  const menuStart = find("menu-start");
   const names = PaperGame.levelNames;
+  const locations = Scenery.locations;
   const levelCount = names.length;
   const saveKey = "paperheart-anniversary-v1";
 
@@ -17,10 +19,11 @@
       const chapters = Array.isArray(data?.completed) ? data.completed : [];
       return {
         completed: new Set(chapters.filter((chapter) => Number.isInteger(chapter) && chapter >= 0 && chapter < levelCount)),
-        sound: data?.sound !== false
+        sound: data?.sound !== false,
+        lastChapter: Number.isInteger(data?.lastChapter) ? data.lastChapter : null
       };
     } catch {
-      return { completed: new Set(), sound: true };
+      return { completed: new Set(), sound: true, lastChapter: null };
     }
   }
 
@@ -28,12 +31,13 @@
   let audio;
   let current = 0;
   let result = null;
+  let screen = "menu";
   let lastFocus;
   const pressed = new Map();
 
   function save() {
     try {
-      localStorage.setItem(saveKey, JSON.stringify({ completed: [...progress.completed], sound: progress.sound }));
+      localStorage.setItem(saveKey, JSON.stringify({ completed: [...progress.completed], sound: progress.sound, lastChapter: progress.lastChapter }));
     } catch {
       // Progress remains available until the page closes.
     }
@@ -155,9 +159,22 @@
   for (const icon of document.querySelectorAll("[data-icon]")) drawIcon(icon, icon.dataset.icon);
   renderSound();
 
+  const couple = find("menu-couple").getContext("2d");
+  couple.fillStyle = "#27253699";
+  couple.fillRect(12, 43, 52, 2);
+  Sprites.draw(couple, "Axel", 9, 12);
+  Sprites.draw(couple, "Swayze", 37, 12, 1, -1);
+  couple.fillStyle = "#f3a2b2";
+  couple.fillRect(35, 3, 3, 3);
+  couple.fillRect(40, 3, 3, 3);
+  couple.fillRect(36, 5, 6, 2);
+  couple.fillRect(37, 7, 4, 1);
+  couple.fillRect(38, 8, 2, 1);
+
   function showGameState(state) {
     find("chapter-number").textContent = "CH. " + String(state.level + 1).padStart(2, "0");
     find("chapter-title").textContent = state.name;
+    find("chapter-location").textContent = locations[state.level];
     find("player").textContent = state.character;
     find("player").parentElement.dataset.side = state.character;
     objective.textContent = state.progress;
@@ -215,6 +232,7 @@
 
   function chapterComplete(level) {
     progress.completed.add(level);
+    progress.lastChapter = level === levelCount - 1 ? null : level + 1;
     save();
     renderChapters();
     result = level;
@@ -225,7 +243,7 @@
     if (result === levelCount - 1) {
       showDialog("On the same page", find("ending-note").content.cloneNode(true), [
         ["Play again", () => openChapter(0)],
-        ["Close the card", () => dialog.close()]
+        ["Main menu", () => enterMenu()]
       ]);
       return;
     }
@@ -235,37 +253,112 @@
     ]);
   }
 
+  function isUnlocked(index) {
+    return Number.isInteger(index) && index >= 0 && index < levelCount &&
+      (index === 0 || progress.completed.has(index) || progress.completed.has(index - 1));
+  }
+
+  function savedChapter() {
+    if (isUnlocked(progress.lastChapter)) return progress.lastChapter;
+    const next = names.findIndex((_, index) => isUnlocked(index) && !progress.completed.has(index));
+    return next === -1 ? 0 : next;
+  }
+
+  const thumbnails = [];
+  function chapterThumbnail(index) {
+    if (thumbnails[index]) return thumbnails[index];
+    const canvas = document.createElement("canvas");
+    canvas.width = 240;
+    canvas.height = 102;
+    canvas.setAttribute("aria-hidden", "true");
+    const ctx = canvas.getContext("2d");
+    ctx.scale(3 / 8, 3 / 8);
+    ctx.imageSmoothingEnabled = false;
+    Scenery.background(ctx, index, 2, 0);
+    thumbnails[index] = canvas;
+    return canvas;
+  }
+
   function renderChapters() {
     const list = find("chapter-list");
     list.replaceChildren();
+    const expanded = screen === "chapters";
+    const selected = screen === "play" ? current : game.level >= 0 && result === null ? current : savedChapter();
     for (const [index, title] of names.entries()) {
       const button = document.createElement("button");
       const done = progress.completed.has(index);
+      const number = String(index + 1).padStart(2, "0");
       button.className = done ? "chapter done" : "chapter";
       button.type = "button";
-      button.textContent = String(index + 1).padStart(2, "0");
-      button.disabled = !done && index > 0 && !progress.completed.has(index - 1);
-      button.title = "Chapter " + (index + 1) + " · " + title + (done ? " · Complete" : button.disabled ? " · Locked" : "");
+      button.disabled = !isUnlocked(index);
+      const status = done ? "Complete" : button.disabled ? "Locked" : "Open";
+      if (expanded) {
+        const label = document.createElement("small");
+        label.textContent = "CH. " + number + " · " + status;
+        const name = document.createElement("strong");
+        name.textContent = locations[index];
+        button.append(chapterThumbnail(index), label, name);
+      } else {
+        button.textContent = number;
+      }
+      button.title = "Chapter " + number + " · " + title + " · " + locations[index] + " · " + status;
       button.setAttribute("aria-label", button.title);
-      if (index === current) button.setAttribute("aria-current", "step");
-      button.addEventListener("click", () => openChapter(index));
+      if (index === selected) button.setAttribute("aria-current", "step");
+      button.addEventListener("click", () => {
+        wakeSound();
+        if (expanded && game.level === index && result === null) resumeChapter();
+        else openChapter(index);
+      });
       list.append(button);
     }
     find("progress").textContent = progress.completed.size + " of " + levelCount + " complete";
   }
 
-  function openChapter(index, focus = true) {
+  function switchScreen(next) {
+    screen = next;
+    document.body.dataset.screen = next;
+    find("title-screen").hidden = next !== "menu";
+    find("play-screen").hidden = next !== "play";
+    find("chapters").hidden = next === "menu";
+    find("chapters-back").hidden = next !== "chapters";
+  }
+
+  function enterMenu(focus = true) {
+    switchScreen("menu");
+    releaseControls();
+    game.setPaused(true);
+    if (dialog.open) dialog.close();
+    let label = "Start our walk";
+    if (game.level >= 0 && result === null) label = "Resume our walk";
+    else if (progress.completed.size === levelCount && progress.lastChapter === null) label = "Walk together again";
+    else if (progress.completed.size || isUnlocked(progress.lastChapter)) label = "Continue chapter " + String(savedChapter() + 1).padStart(2, "0");
+    find("start-label").textContent = label;
+    if (focus) menuStart.focus();
+  }
+
+  function resumeChapter() {
+    switchScreen("play");
+    game.setPaused(false);
+    renderChapters();
+    world.focus();
+  }
+
+  function openChapter(index) {
+    if (!isUnlocked(index)) return;
+    switchScreen("play");
     if (dialog.open) dialog.close();
     releaseControls();
     current = index;
     result = null;
+    progress.lastChapter = index;
+    save();
     game.load(index);
-    game.setPaused(false);
     renderChapters();
-    if (focus) world.focus({ preventScroll: true });
+    world.focus();
   }
 
   function pause() {
+    if (screen !== "play") return;
     if (dialog.open) {
       dialog.close();
       return;
@@ -276,22 +369,36 @@
     }
     showDialog("Taking a little break", paragraphs("Axel and Swayze will be right here."), [
       ["Keep playing", () => dialog.close()],
+      ["Main menu", () => enterMenu()],
       ["Restart chapter", () => openChapter(current)]
     ]);
   }
 
   const game = new PaperGame(world, { onUpdate: showGameState, onComplete: chapterComplete, onSound: playSound });
-  const unlocked = names.findIndex((_, index) => !progress.completed.has(index));
-  openChapter(unlocked < 0 ? 0 : unlocked, false);
+  enterMenu(false);
+
+  menuStart.addEventListener("click", () => {
+    wakeSound();
+    if (game.level >= 0 && result === null) resumeChapter();
+    else openChapter(savedChapter());
+  });
+  find("menu-chapters").addEventListener("click", () => {
+    switchScreen("chapters");
+    renderChapters();
+    find("chapters-back").focus();
+  });
+  find("chapters-back").addEventListener("click", () => enterMenu());
+  find("back-to-menu").addEventListener("click", () => enterMenu());
 
   find("pause").addEventListener("click", pause);
   find("restart").addEventListener("click", () => openChapter(current));
   find("dialog-close").addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => {
     if (dialog.open) return;
-    game.setPaused(false);
+    game.setPaused(screen !== "play");
     if (dialog.contains(document.activeElement) || document.activeElement === document.body) {
-      const target = lastFocus && document.contains(lastFocus) ? lastFocus : world;
+      const target = lastFocus && document.contains(lastFocus) && !lastFocus.closest("[hidden]") ? lastFocus :
+        screen === "menu" ? menuStart : screen === "chapters" ? find("chapters-back") : world;
       target.focus({ preventScroll: true });
     }
   });
@@ -301,7 +408,7 @@
       "Move with the arrow keys or A and D. Press Space to jump.",
       "Press X to fold the card and switch between Axel and Swayze. Use the on-screen controls on a touch screen.",
       "Follow the note under the play area. Step onto switches, pass letters between pages, and time your jumps across moving or fragile paper. If you fall, you’ll return to safe ground."
-    ), [["Back to the card", () => dialog.close()]]);
+    ), [["Got it", () => dialog.close()]]);
   });
 
   soundButton.addEventListener("click", () => {
@@ -319,6 +426,12 @@
   };
   document.addEventListener("keydown", (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (screen === "chapters" && event.code === "Escape" && !dialog.open) {
+      event.preventDefault();
+      enterMenu();
+      return;
+    }
+    if (screen !== "play") return;
     if (event.code === "KeyP" || (event.code === "Escape" && !dialog.open)) {
       event.preventDefault();
       if (!event.repeat) pause();

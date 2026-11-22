@@ -17,7 +17,7 @@ import (
 
 const title = "P.S. I’ll Catch You"
 
-//go:embed index.html style.css app.js game.js music.js postage.js scenery.js sprites.js Third-Party-Notices.txt
+//go:embed index.html style.css app.js game.js music.js postage.js scenery.js sprites.js night-walk.png Third-Party-Notices.txt
 var game embed.FS
 
 func main() {

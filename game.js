@@ -22,7 +22,7 @@
       platforms:[shore(0,213,177),ground(209,184,72),ground(311,166,62),
         ground(406,184,60),shore(494,199,146)],
       steps:[task('heart',243,184,0,'Heart 0/1','Jump to the pink heart on the first island.'),
-        task('arrive',580,199,0,'Heart 1/1','Carry the heart to the envelope beneath the tree.')]},
+        task('arrive',580,199,0,'Heart 1/1','Carry the heart to the envelope on the far right.')]},
     {name:'Written in the Margins',side:1,starts:[point(337,153),point(584,207)],goalLabel:'Relay the letter',
       platforms:[shore(0,180,110),ground(143,158,57),ground(230,136,52),ground(305,153,65),
         ground(407,178,55),ground(492,194,51),shore(560,207,80)],
@@ -63,7 +63,7 @@
     {name:'Wrong Side Up',side:1,starts:[point(63,207),point(591,152)],goalLabel:'Cross the loose paper',
       platforms:[shore(0,207,103),loose(137,167,48),loose(222,141,42),ground(307,176,45),
         loose(397,201,46),loose(481,173,46),shore(561,152,79)],
-      steps:[task('arrive',60,207,1,'Loose paper','Cross left before the cracked paper falls. The grassy middle ledge is safe to rest on.')]},
+      steps:[task('arrive',60,207,1,'Loose paper','Cross left before the cracked paper falls. The solid middle ledge is safe to rest on.')]},
     {name:'Under One Sky',side:1,starts:[point(52,213),point(579,215)],goalLabel:'Meet beneath the pennant',
       platforms:[shore(0,213,104),ground(140,176,55),ground(219,145,36,24,{drift:13,speed:1.4,phase:0}),
         ribbon(289,124,64,2),ground(389,146,35,24,{drift:15,speed:1.55,phase:2.1}),ground(465,175,54),shore(558,215,82)],
@@ -74,7 +74,7 @@
     {name:'P.S. I’ll Catch You',side:0,starts:[point(58,211),point(563,192)],goalLabel:'Find Swayze',reunion:true,
       platforms:[shore(0,211,153),ground(181,185,65),ground(273,160,62),
         ground(348,180,48),shore(398,192,242)],
-      steps:[task('reunion',563,192,0,'Find Swayze','“There you are, baby!” Follow the garden path and walk into Swayze’s arms.')]},
+      steps:[task('reunion',563,192,0,'Find Swayze','“There you are, baby!” Follow the promenade and walk into Swayze’s arms.')]},
   ];
 
   const HEART = [
@@ -249,7 +249,7 @@
         this.accumulator+=Math.min(0.06,(stamp-this.lastFrame)/1000);
         this.lastFrame=stamp;
         while(this.accumulator>=DT) { this.step(DT); this.accumulator-=DT; }
-        if(this.level>=0) this.draw();
+        if(this.level>=0 && !this.paused) this.draw();
         requestAnimationFrame(this.frame);
       };
       requestAnimationFrame(this.frame);
@@ -450,7 +450,7 @@
         const open = this.isSolid(p);
         if(open) {
           const style = p.style || 'ground';
-          window.Scenery.platform(ctx,Math.round(p.x),p.y,p.w,p.h,this.level*11+p.index,style);
+          window.Scenery.platform(ctx,Math.round(p.x),p.y,p.w,p.h,this.level*11+p.index,style,this.level);
           if(p.spring) flowerSpring(ctx,p);
           if(p.crumble) drawFragile(ctx, p, this.cracks[p.index]?.fallsAt - time, time);
           if(p.ferry) {
