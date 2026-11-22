@@ -7,68 +7,74 @@
   const slide = (a, b, amount) => a + clamp(b - a, -amount, amount);
   const ease = t => t * t * (3 - 2 * t);
 
-  // Platforms are listed from the starting edge to the letter. A heart or ribbon
-  // platform unfolds after the first or second pickup, on both faces of the card.
-  function land(x, y, w, h = 26, features = {}) {
-    return {x, y, w, h, needs: 0, side: -1, ...features};
-  }
-  function heartStep(x, y, w, features = {}) {
-    return land(x, y, w, 19, {needs: 1, ...features});
-  }
-  function ribbon(x, y, w, features = {}) {
-    return land(x, y, w, 16, {needs: 2, ...features});
-  }
-  function fold(name, side, reversed, left, right, shelves, marks, note) {
-    const platforms = [land(0, left[1], left[0], HEIGHT - left[1] + 18),
-      ...shelves, land(right[0], right[1], WIDTH - right[0], HEIGHT - right[1] + 18)];
-    if (reversed) for (const p of platforms) p.x = WIDTH - p.x - p.w;
-    const orient = x => reversed ? WIDTH - x : x;
-    return {name, side, reversed, note, platforms,
-      start: {x: orient(64), y: left[1]},
-      friend: {x: orient(548), y: right[1]},
-      goal: {x: orient(580), y: right[1], side},
-      hearts: marks.map(([x,y], i) => ({x: orient(x), y, side: i === 1 ? 1 - side : side}))};
-  }
+  const ground = (x, y, w, h = 28, extra = {}) => ({x, y, w, h, needs:0, ...extra});
+  const shore = (x, y, w) => ground(x, y, w, HEIGHT - y + 18);
+  const ribbon = (x, y, w, needs, extra = {}) => ground(x, y, w, 18, {style:'ribbon', needs, ...extra});
+  const spring = (x, y, w) => ground(x, y, w, 26, {spring:true});
+  const loose = (x, y, w) => ground(x, y, w, 16, {style:'ribbon', crumble:true});
+  const point = (x, y) => ({x,y});
+  const task = (kind, x, y, side, progress, hint) => ({kind,x,y,side,progress,hint});
+
+  // Objective positions use the character's feet. Each chapter owns its movement
+  // route, its starting positions and its win condition, including the reunion.
   const LEVELS = [
-    fold('The First Fold', 0, false, [177,213], [494,199],
-      [land(209,184,72), land(311,209,53), land(406,223,60),
-       ribbon(302,153,67), heartStep(404,176,63)],
-      [[242,151],[433,144],[334,119]], 'Leap to the pink heart.'),
-    fold('Written in the Margins', 1, true, [124,197], [516,214],
-      [land(144,175,58), land(216,142,65), ribbon(313,124,74),
-       heartStep(403,151,63), land(471,179,42)],
-      [[244,112],[432,121],[348,93]], 'Climb the little steps to the heart.'),
-    fold('A Daisy for You', 0, false, [139,220], [510,209],
-      [land(163,191,61,28,{spring:true}), land(232,122,60),
-       ribbon(304,146,58), heartStep(396,162,58), land(473,183,34)],
-      [[256,90],[424,131],[330,114]], 'Jump from the daisy for an extra lift.'),
-    fold('The Ribbon Knot', 1, true, [163,183], [500,189],
-      [land(207,209,72), ribbon(294,173,72,{drift:10}), heartStep(392,142,72)],
-      [[240,181],[426,113],[328,141]], 'Drop to the heart along the lower edge.'),
-    fold('Cloud Stationery', 1, false, [124,217], [509,206],
-      [land(139,184,56), land(205,150,56), land(272,123,48),
-       ribbon(332,107,49), heartStep(407,136,54), land(470,170,38)],
-      [[292,93],[432,105],[355,75]], 'Follow the staircase up into the clouds.'),
-    fold('The Blushing Bridge', 0, true, [158,208], [513,214],
-      [land(181,184,55,24), land(250,161,55),
-       ribbon(323,146,57,{drift:12}), heartStep(403,167,64,{drift:7}), land(475,191,30)],
-      [[276,128],[435,135],[352,115]], 'Follow the stitched edge to the pink heart.'),
-    fold('A Little Lift', 0, false, [148,223], [497,211],
-      [land(167,210,67,32,{spring:true}), land(234,142,73),
-       ribbon(317,121,68), heartStep(415,143,64), land(475,178,37)],
-      [[265,112],[443,111],[348,88]], 'Bounce from the daisy to the high ledge.'),
-    fold('Wrong Side Up', 1, true, [130,170], [510,198],
-      [land(158,201,57), land(229,217,51), ribbon(296,184,60),
-       heartStep(376,148,63,{drift:8}), land(462,164,40)],
-      [[251,188],[404,115],[324,154]], 'Hop down to the heart in the hollow.'),
-    fold('Under One Sky', 1, false, [133,215], [513,192],
-      [land(146,177,53), land(216,142,60), ribbon(300,123,68,{drift:12}),
-       heartStep(398,147,63), land(466,174,40)],
-      [[244,108],[426,115],[326,92]], 'Jump the terraces, then fold the sky.'),
-    fold('P.S. I’ll Catch You', 0, false, [134,209], [514,177],
-      [land(159,177,62), land(238,143,59), ribbon(332,129,66),
-       heartStep(436,154,44)],
-      [[264,110],[460,124],[364,99]], 'One last heart trail to the other side.')
+    {name:'The First Fold', side:0, starts:[point(64,213),point(548,199)], goalLabel:'Deliver a heart',
+      platforms:[shore(0,213,177),ground(209,184,72),ground(311,166,62),
+        ground(406,184,60),shore(494,199,146)],
+      steps:[task('heart',243,184,0,'Heart 0/1','Jump to the pink heart on the first island.'),
+        task('arrive',580,199,0,'Heart 1/1','Carry the heart to the envelope beneath the tree.')]},
+    {name:'Written in the Margins',side:1,starts:[point(337,153),point(584,207)],goalLabel:'Relay the letter',
+      platforms:[shore(0,180,110),ground(143,158,57),ground(230,136,52),ground(305,153,65),
+        ground(407,178,55),ground(492,194,51),shore(560,207,80)],
+      steps:[task('carry',516,194,1,'Find the note','Pick up the handwritten note on the first ledge to the left.'),
+        task('handoff',337,153,1,'Pass the note','“I wrote you something, baby.” Bring Swayze’s note to Axel in the middle.'),
+        task('drop',60,180,0,'Deliver the note','“I’ve got it, baby.” Carry Swayze’s note left to the envelope.')]},
+    {name:'A Daisy for You',side:0,starts:[point(51,218),point(569,198)],goalLabel:'Gather a bouquet',
+      platforms:[shore(0,218,127),spring(153,200,64),ground(224,133,64),ground(276,213,87),
+        ground(359,162,58),ground(435,187,49),shore(511,198,129)],
+      steps:[task('petal',250,133,0,'Daisies 0/3','Pick three daisies in any order. The spring flower reaches the high one.'),
+        task('petal',315,213,0,'Daisies 1/3','Look on both the upper and lower paths for your bouquet.'),
+        task('petal',386,162,0,'Daisies 2/3','One more daisy for Swayze.'),
+        task('arrive',568,198,0,'Bouquet ready','Take the bouquet to Swayze’s envelope.')]},
+    {name:'The Ribbon Knot',side:1,starts:[point(586,184),point(53,211)],goalLabel:'Untie the bridge',
+      platforms:[shore(0,211,117),ground(157,181,56),ribbon(243,149,56,1),
+        ribbon(342,160,55,2),ribbon(429,182,56,2),shore(529,184,111)],
+      steps:[task('switch',183,181,1,'Knots 0/2','Touch the first pink bow to unfurl a ribbon.'),
+        task('switch',271,149,1,'Knots 1/2','Climb onto the new ribbon and loosen the second bow.'),
+        task('arrive',60,211,0,'Bridge untied','Cross the two ribbons to the envelope on the left.')]},
+    {name:'Cloud Stationery',side:1,starts:[point(571,191),point(59,211)],goalLabel:'Ride the mail ferry',
+      platforms:[shore(0,211,123),ground(148,186,66),
+        ribbon(304,169,67,0,{drift:106, speed:0.95, phase:-Math.PI/2, ferry:true}),
+        ground(461,154,47),shore(536,191,104)],
+      steps:[task('ride',445,169,1,'Catch the ferry','Board the striped mail ferry. Ride it to the little flag on the right.'),
+        task('arrive',583,191,1,'Ferry arrived','Hop off at the far bank and deliver the mail.')]},
+    {name:'The Blushing Bridge',side:0,starts:[point(54,211),point(587,210)],goalLabel:'Hold the bridge',
+      platforms:[shore(0,211,120),ground(146,180,53),ground(220,158,66),
+        ribbon(321,153,65,1),ribbon(419,178,57,1),shore(522,210,118)],
+      steps:[task('plate',252,158,0,'Hold the plate','Stand on the pink plate to lift the bridge for Swayze.'),
+        task('gate',231,158,1,'Bridge held','Cross the bridge from the right to the little flag near Axel.'),
+        task('drop',57,211,1,'Bridge latched','The bridge is latched. Deliver the parcel to the left envelope.')]},
+    {name:'A Little Lift',side:0,starts:[point(58,225),point(587,133)],goalLabel:'Light the lanterns',
+      platforms:[shore(0,225,112),spring(141,207,64),spring(221,136,67),ground(310,77,60),
+        ground(400,110,42,24,{drift:16,speed:1.35,phase:0}),ground(480,151,40),shore(548,133,92)],
+      steps:[task('lantern',244,136,0,'Lanterns 0/2','The daisy is a spring. Jump from it to light the first lantern.'),
+        task('lantern',341,77,0,'Lanterns 1/2','Bounce again to light the lantern at the top of the card.'),
+        task('arrive',586,133,0,'Lanterns lit','Time your landing on the swaying ledge, then hop down to the envelope.')]},
+    {name:'Wrong Side Up',side:1,starts:[point(63,207),point(591,152)],goalLabel:'Cross the loose paper',
+      platforms:[shore(0,207,103),loose(137,167,48),loose(222,141,42),ground(307,176,45),
+        loose(397,201,46),loose(481,173,46),shore(561,152,79)],
+      steps:[task('arrive',60,207,1,'Loose paper','Cross left before the cracked paper falls. The grassy middle ledge is safe to rest on.')]},
+    {name:'Under One Sky',side:1,starts:[point(52,213),point(579,215)],goalLabel:'Meet beneath the pennant',
+      platforms:[shore(0,213,104),ground(140,176,55),ground(219,145,36,24,{drift:13,speed:1.4,phase:0}),
+        ribbon(289,124,64,2),ground(389,146,35,24,{drift:15,speed:1.55,phase:2.1}),ground(465,175,54),shore(558,215,82)],
+      steps:[task('lantern',491,175,1,'Beacons 0/2','Light Swayze’s beacon on the right.'),
+        task('lantern',167,176,0,'Beacons 1/2','Light Axel’s beacon on the left to open the middle of the card.'),
+        task('plate',305,124,0,'Meet in the middle','Time Axel’s jump from the moving ledge. Stand on the pink plate under the pennant.'),
+        task('gate',335,124,1,'Axel is waiting','Bring Swayze up to the pennant beside Axel.')]},
+    {name:'P.S. I’ll Catch You',side:0,starts:[point(58,211),point(563,192)],goalLabel:'Find Swayze',reunion:true,
+      platforms:[shore(0,211,153),ground(181,185,65),ground(273,160,62),
+        ground(348,180,48),shore(398,192,242)],
+      steps:[task('reunion',563,192,0,'Find Swayze','“There you are, baby!” Follow the garden path and walk into Swayze’s arms.')]},
   ];
 
   const HEART = [
@@ -124,6 +130,113 @@
       checkpoint:{...point}, lastPlatform:null};
   }
 
+  // The paper props are drawn on the same pixel grid as the characters.
+  const markerInk = {
+    k:'#76545c', b:'#ad7c6f', i:'#f1d1ad', w:'#fff0ca', h:'#fff9df',
+    r:'#b95f74', p:'#ee8797', l:'#ffb6b0', t:'#6e9180', s:'#acc39a',
+    g:'#d99c51', y:'#ffcf76', u:'#a9a4ac', d:'#826b79'
+  };
+  const markerArt = {
+    petal: [
+      '......bbb......','.....bhwwb.....','.....bhwwb.....','..bbb.bwb.bbb..',
+      '.bhwwbbgbbwwwb.','.bwhwwgyggwhwb.','..bbbyggygwbb..','...bbwgyggbb...',
+      '..bwwwbgbwwwb..','..bhwwbtbwhwb..','...bbbktkbbb...','......ktk.ss...',
+      '...tttktksts...','....stktsts....','.....tktt......','......kt.......'
+    ],
+    switch: [
+      '..kkk.......kkk..','.krllkk...kkllrk.','krppllrk.krllpprk',
+      'krppplprkrplppprk','krrppprppprppprrk','.krrrkrlllrkrrrk.',
+      '..kkkkrppprkkkk..','....krkrrrkrk....','...krpk...kprk...',
+      '..krlpk...kplrk..','.krlpk.....kplrk.','.krrk.......krrk.',
+      '..kk.........kk..'
+    ],
+    carry: [
+      '..kkkkkkkkk...','..khhhhhhikw..','..khwwwwwkbk..','..khwwwwwibik.',
+      '..khwbbbwwbbk.','..khwwwwwwwwk.','..khwbbbbbwwk.','..khwwwwwwwwk.',
+      '..khwbbbwwwwk.','..khwwwwwrwrk.','..khwwwwwrrrk.','..khwwwwwwrwk.',
+      '..kiiiiiiiiik.','...kkkkkkkkk..'
+    ],
+    lantern: [
+      '......kkk......','.....kbwbk.....','.....kb.bk.....','....kkkkkkk....',
+      '...kbwwiwwbk...','..kkkkkkkkkkk..','...kbwwwwwbk...','...kuuuuuuuk...',
+      '...kuuiuuuuk...','...kuuuuuuuk...','...kuuuuuuuk...','...kuuuuuuuk...',
+      '...kuuuuuuuk...','...kbuuuuubk...','..kbbbbbbbbbk..','..kkkkkkkkkkk..',
+      '.....kbwbk.....','.....kbbbk.....','.....kbbbk.....','....kkkkkkk....'
+    ],
+    gate: [
+      '...gg..........','..gyyg.........','...gkrrrrrrk...','...kblppppprk..',
+      '...kblppwwpprk.','...kblpwhwpprk.','...kblppwppprk.','...kbrppppprk..',
+      '...kbrrrrrrk...','...kb..........','...kb..........','...kb..........',
+      '...kb..........','...kb..........','...kb..........','..kbbk.........'
+    ]
+  };
+
+  // Combine adjacent pixels of the same color into one canvas operation.
+  function inkRuns(rows) {
+    const runs = [];
+    const width = Math.max(...rows.map(row => row.length));
+    rows.forEach((row, y) => {
+      for (let x = 0; x < row.length;) {
+        const ink = row[x], start = x++;
+        while (x < row.length && row[x] === ink) x++;
+        if (ink !== '.') runs.push([start - Math.floor(width / 2), y - rows.length, x - start, ink]);
+      }
+    });
+    return runs;
+  }
+  const markerRuns = Object.fromEntries(Object.entries(markerArt).map(([kind, rows]) => [kind, inkRuns(rows)]));
+
+  function drawTaskMarker(ctx, step, time, current, taken = false) {
+    const {kind} = step;
+    const x = Math.round(step.x), feet = Math.round(step.y);
+    if (kind === 'plate') {
+      const height = taken ? 2 : 5;
+      rect(ctx,'#785d5c',x-12,feet-2,25,3);
+      rect(ctx,'#a37c69',x-11,feet-1,23,2);
+      rect(ctx,taken?'#55786d':'#8c5963',x-9,feet-height-1,19,height);
+      rect(ctx,taken?'#b9d2a3':'#f4a29b',x-8,feet-height-1,17,2);
+      rect(ctx,'#fff1c9',x-2,feet-height-1,5,1);
+      return;
+    }
+    if (kind !== 'heart' && !markerRuns[kind]) return;
+    const grounded = kind === 'lantern' || kind === 'gate';
+    if (taken && !grounded) return;
+    const bob = current ? Math.round(Math.sin(time * 3) * 2) : 0;
+    const bottom = grounded ? feet : feet - 19 + bob;
+    ctx.save();
+    if (!current && !taken && !grounded) ctx.globalAlpha *= 0.64;
+    if (kind === 'heart') {
+      pixelHeart(ctx,x,feet-27+bob,1,!current);
+    } else {
+      for (const [dx,dy,w,ink] of markerRuns[kind]) {
+        rect(ctx,markerInk[ink],x+dx,bottom+dy,w,1);
+      }
+    }
+    if (kind === 'lantern' && taken) {
+      rect(ctx,'#efa658',x-3,bottom-12,7,5);
+      rect(ctx,'#ffcf78',x-2,bottom-13,5,5);
+      rect(ctx,'#fff0b4',x-1,bottom-12,3,4);
+      if (Math.sin(time*4)>0) rect(ctx,'#fff8ce',x,bottom-14,1,3);
+    }
+    if (current && !taken && Math.sin(time*3+x)>0) {
+      glint(ctx,x+10,grounded?bottom-17:bottom-12);
+    }
+    ctx.restore();
+  }
+
+  function drawFragile(ctx, p, remaining, time) {
+    const active = Number.isFinite(remaining);
+    const urgent = active && remaining < 0.3;
+    const color = urgent && Math.sin(time*24)>0 ? '#fff1c4' : '#845c61';
+    for (let dx=6; dx<p.w-5; dx+=13) {
+      const x=Math.round(p.x+dx), y=Math.round(p.y);
+      rect(ctx,'#edc4a2',x-2,y,4,1);
+      rect(ctx,color,x,y+1,1,2);
+      rect(ctx,color,x-1,y+3,1,2);
+      if (active) rect(ctx,color,x-2,y+5,1,urgent?4:2);
+    }
+  }
+
   class PaperGame {
     static levelNames = LEVELS.map(level => level.name);
     constructor(canvas, hooks = {}) {
@@ -144,15 +257,22 @@
     load(index) {
       if (!Number.isInteger(index) || index<0 || index>=LEVELS.length) return;
       this.level=index; this.layout=LEVELS[index]; this.side=this.layout.side;
-      this.hearts=this.layout.hearts.map(h=>({...h,taken:false}));
-      this.count=0; this.time=0; this.foldTime=0; this.finishTime=0; this.finished=false;
-      this.activeEnding=false; this.jumpBuffer=0; this.flash=0; this.paused=false;
-      this.confetti=[]; this.newInk=[]; this.firstFold=false;
-      this.keys={left:false,right:false,jump:false,fold:false};
-      this.actors=[];
-      const toRight=this.layout.reversed?-1:1;
-      this.actors[this.side]=makeActor(this.layout.start,toRight);
-      this.actors[1-this.side]=makeActor(this.layout.friend,-toRight);
+      this.count = 0;
+      this.time = 0;
+      this.foldTime = 0;
+      this.finishTime = 0;
+      this.finished = false;
+      this.activeEnding = false;
+      this.jumpBuffer = 0;
+      this.flash = 0;
+      this.paused = false;
+      this.confetti = [];
+      this.newInk = [];
+      this.picked = this.layout.steps.map(() => false);
+      this.cracks = {};
+      this.keys = {left:false, right:false, jump:false, fold:false};
+      this.actors = this.layout.starts.map((start, id) =>
+        makeActor(start, start.x < this.layout.starts[1 - id].x ? 1 : -1));
       this.speak(); this.draw();
     }
     restart() { this.load(this.level); }
@@ -168,30 +288,86 @@
       this.keys[action]=Boolean(pressed);
       if(!pressed || was) return;
       if(action==='jump') this.jumpBuffer=0.14;
-      if(action!=='fold' || this.foldTime>0) return;
-      this.side=1-this.side; this.foldTime=0.3; this.jumpBuffer=0; this.firstFold=true;
+      if(action!=='fold' || this.foldTime>0 || this.layout.reunion) return;
+      this.side=1-this.side; this.foldTime=0.3; this.jumpBuffer=0;
       this.sound('fold'); this.speak();
     }
     sound(kind) { this.hooks.onSound?.(kind); }
     speak() {
-      const next=this.hearts[this.count], goal=this.layout.goal;
-      let hint;
-      if(next && next.side!==this.side) hint='Fold to '+NAMES[next.side]+' for the next heart.';
-      else if(this.count===0) hint=this.layout.note;
-      else if(this.count===1) hint='Find the heart on the pink paper step.';
-      else if(this.count===2) hint='Jump to the heart on the new ribbon.';
-      else if(goal.side!==this.side) hint='Fold to '+NAMES[goal.side]+' to finish the card.';
-      else if(this.level===9) hint='Jump into Swayze’s arms!';
-      else hint='Reach the sealed letter to finish this fold.';
-      this.hooks.onUpdate?.({level:this.level,name:this.layout.name,character:NAMES[this.side],
-        hearts:this.count,hint});
+      const {goalLabel, steps, name} = this.layout;
+      const task = steps[Math.min(this.count, steps.length - 1)];
+      const hint = task.side === this.side
+        ? task.hint
+        : 'Fold to ' + NAMES[task.side] + '. ' + task.hint;
+      this.hooks.onUpdate?.({level:this.level, name, character:NAMES[this.side],
+        progress:task.progress, goalLabel, hint});
     }
     platsAt(time) {
-      return this.layout.platforms.map((p,index)=>({...p,index,
-        x:p.x+(p.drift?Math.sin(time*1.4+index)*p.drift:0)}));
+      return this.layout.platforms.map((p,index) => ({...p, index,
+        x:p.x + (p.drift ? Math.sin(time * p.speed + p.phase) * p.drift : 0)}));
+    }
+    isSolid(p) {
+      const crack = this.cracks[p.index];
+      return this.count >= p.needs && !(crack && this.time >= crack.fallsAt && this.time < crack.returnsAt);
     }
     solids() {
-      return this.platsAt(this.time).filter(p=>p.needs<=this.count && (p.side===-1||p.side===this.side));
+      return this.platsAt(this.time).filter(p => this.isSolid(p));
+    }
+    touching(a, b, width) {
+      return Math.abs(a.x - b.x) <= width && Math.abs(a.y - b.y) < 24;
+    }
+    checkObjective(a, floor) {
+      const steps = this.layout.steps;
+      let task = steps[this.count];
+      const previous = steps[this.count - 1];
+      // The bridge stays up only while the partner is still on the plate.
+      if (previous?.kind === 'plate' && task.kind === 'gate') {
+        const holder = this.actors[previous.side];
+        if (!holder.grounded || Math.abs(holder.x - previous.x) > 13 ||
+            Math.abs(holder.y - previous.y) > 3) {
+          this.count--;
+          this.speak();
+          return;
+        }
+      }
+      if (task.side !== this.side) return;
+
+      const nearMark = mark => Math.abs(a.x - mark.x) < 14 && Math.abs(a.y - mark.y) < 24;
+      let targetIndex = this.count;
+      if (task.kind === 'petal') {
+        targetIndex = steps.findIndex((s, i) => s.kind === 'petal' && !this.picked[i] && nearMark(s));
+        if (targetIndex < 0) return;
+        task = steps[targetIndex];
+      }
+      const other = this.actors[1 - this.side];
+      let x = task.x, y = task.y;
+      switch (task.kind) {
+        case 'handoff':
+        case 'reunion':
+          if (!this.touching(a, other, task.kind === 'reunion' ? 15 : 17)) return;
+          x = other.x; y = other.y;
+          break;
+        case 'plate':
+        case 'gate':
+          if (!a.grounded || Math.abs(a.x - x) > 12 || Math.abs(a.y - y) > 3) return;
+          break;
+        case 'ride':
+          if (!floor?.ferry || floor.x + floor.w / 2 < x - 4) return;
+          break;
+        default:
+          if (!nearMark(task)) return;
+      }
+      this.picked[targetIndex] = true;
+      this.count++;
+      this.newInk[this.count] = this.time;
+      if (this.count === steps.length) {
+        this.completeFold({x, y});
+        return;
+      }
+      const effect = {plate:'switch', gate:'switch', switch:'switch', lantern:'switch', handoff:'pass', ride:'pass'};
+      this.sound(effect[task.kind] || 'heart');
+      this.burst(x, y - 18, ['#fff3ce','#f47d92','#d65479'], 12);
+      this.speak();
     }
     burst(x,y,colors,n=10) {
       for(let i=0;i<n;i++) {
@@ -240,7 +416,11 @@
         if(surface) {
           a.y=surface.y;a.vy=0;a.grounded=true;a.coyote=0.105;
           a.floor=surface.index;a.lastPlatform=surface.x;
-          if(surface.needs===0 && !surface.drift && a.x>surface.x+9 && a.x<surface.x+surface.w-9)
+          if(surface.crumble && (!this.cracks[surface.index] || this.time >= this.cracks[surface.index].returnsAt)) {
+            this.cracks[surface.index] = {fallsAt:this.time + 0.64, returnsAt:this.time + 2.35};
+            this.sound('crumble');
+          }
+          if(surface.needs===0 && !surface.drift && !surface.crumble && a.x>surface.x+9 && a.x<surface.x+surface.w-9)
             a.checkpoint={x:a.x,y:a.y};
         }
       }
@@ -248,44 +428,35 @@
         Object.assign(a,{...a.checkpoint,vx:0,vy:0,grounded:true,coyote:0.1,floor:null,lastPlatform:null});
         this.flash=0.23;this.sound('fall');
       }
-      const heart=this.hearts[this.count];
-      if(heart && heart.side===this.side && Math.abs(a.x-heart.x)<16 && Math.abs(a.y-17-heart.y)<20) {
-        heart.taken=true; this.count++; this.newInk[this.count]=this.time;
-        this.sound('heart'); this.burst(heart.x,heart.y,['#fff3ce','#f47d92','#d65479'],17);
-        if(this.count===3 && this.level===9) {
-          // Swayze arrives at the heart window to receive Axel's last jump.
-          const friend=this.actors[1-this.side];
-          Object.assign(friend,{x:this.layout.goal.x,y:this.layout.goal.y,vx:0,vy:0,grounded:true,floor:null});
-          this.burst(friend.x,friend.y-12,['#ffc5be','#fff0d8'],10);
-        }
-        this.speak();
-      }
-      const goal=this.layout.goal;
-      const inReach = Math.abs(a.x - goal.x) < 19;
-      const meetsGoal = this.level === 9
-        ? !a.grounded && a.y < goal.y - 6 && a.y > goal.y - 52
-        : Math.abs(a.y - goal.y) < 27;
-      if (this.count === 3 && this.side === goal.side && inReach && meetsGoal) this.completeFold();
+      this.checkObjective(a, platforms.find(p => p.index === a.floor));
     }
-    completeFold() {
-      this.activeEnding=true; this.finishTime=0;
-      const a=this.actors[this.side], goal=this.layout.goal;
-      this.catchStart={x:a.x,y:a.y};
+    completeFold(goal) {
+      this.activeEnding = true;
+      this.finishTime = 0;
+      const a = this.actors[this.side];
+      this.catchStart = {x:a.x, y:a.y};
       this.burst(goal.x,goal.y-25,['#fb8898','#fbe9b6','#bd7f9a','#e8b776'],22);
       this.sound('complete');
     }
     draw() {
       if(this.level<0) return;
-      const ctx=this.ctx, time=this.time, goal=this.layout.goal, ending=this.activeEnding;
+      const ctx = this.ctx, time = this.time, ending = this.activeEnding;
+      const {steps, reunion} = this.layout;
+      const goal = reunion ? this.actors[1] : steps[steps.length - 1];
       ctx.save(); ctx.imageSmoothingEnabled=false;
       window.Scenery.background(ctx,this.level,time,this.side);
       const platforms=this.platsAt(time);
       for(const p of platforms) {
-        const open=p.needs<=this.count && (p.side===-1 || p.side===this.side);
+        const open = this.isSolid(p);
         if(open) {
-          const style=p.needs===1?'heart':p.needs===2?'ribbon':'ground';
+          const style = p.style || 'ground';
           window.Scenery.platform(ctx,Math.round(p.x),p.y,p.w,p.h,this.level*11+p.index,style);
           if(p.spring) flowerSpring(ctx,p);
+          if(p.crumble) drawFragile(ctx, p, this.cracks[p.index]?.fallsAt - time, time);
+          if(p.ferry) {
+            rect(ctx, '#805665', p.x+5, p.y-15, 2, 15);
+            rect(ctx, '#ed8799', p.x+7, p.y-15, 10, 5);
+          }
           if(p.needs && time-this.newInk[p.needs]<0.9) {
             const d=(time-this.newInk[p.needs])/0.9;
             for(let i=0;i<3;i++) glint(ctx,p.x+8+i*(p.w-16)/2,p.y-4-Math.round(d*6)-i%2*3);
@@ -304,23 +475,24 @@
           ctx.restore();
         }
       }
-      if(this.level!==9 || this.count<3) letter(ctx,goal.x,goal.y,this.count===3,time);
-      else {
-        ctx.save();ctx.globalAlpha=0.69;
-        pixelHeart(ctx,goal.x+1,goal.y-40,3,true);
-        ctx.restore();
-      }
-      for(let i=0;i<this.hearts.length;i++) {
-        const h=this.hearts[i]; if(h.taken) continue;
-        const current=i===this.count && h.side===this.side;
-        const bob=Math.round(Math.sin(time*2.5+i)*2);
-        ctx.save();ctx.globalAlpha=current?1:0.72;
-        pixelHeart(ctx,h.x,h.y+bob,1,!current);
-        if(current) {
-          glint(ctx,h.x-9,h.y-6+bob);
-          if(Math.sin(time*3)>0.1) rect(ctx,'#fff2d9',h.x+9,h.y+bob+3,2,2);
+      if (reunion) {
+        pixelHeart(ctx, goal.x, goal.y - 43 + Math.round(Math.sin(time * 2)), 1);
+      } else {
+        for (const [i, mark] of steps.entries()) {
+          const active = mark.side === this.side && (i === this.count ||
+            (mark.kind === 'petal' && steps[this.count]?.kind === 'petal' && !this.picked[i]));
+          const done = mark.kind === 'petal' ? this.picked[i] : i < this.count;
+          if (mark.kind === 'arrive' || mark.kind === 'drop') {
+            letter(ctx, mark.x, mark.y, active, time);
+          } else if (mark.kind === 'ride') {
+            drawTaskMarker(ctx, {...mark, kind:'gate', y:mark.y+7}, time, active, done);
+          } else if (mark.kind === 'handoff' && active) {
+            const partner = this.actors[1 - this.side];
+            drawTaskMarker(ctx, {...mark, kind:'carry', x:partner.x, y:partner.y-22}, time, true);
+          } else {
+            drawTaskMarker(ctx, mark, time, active, done);
+          }
         }
-        ctx.restore();
       }
       const order=[1-this.side,this.side];
       for(const id of order) {
@@ -329,10 +501,11 @@
         if(ending && this.level===9) {
           const t=clamp(this.finishTime/0.5,0,1);
           if(id===this.side) {
-            x=this.catchStart.x+(goal.x-9-this.catchStart.x)*ease(t);
-            y=this.catchStart.y+(goal.y-this.catchStart.y)*ease(t)-Math.sin(t*Math.PI)*15;
-            pose=t<0.85?'jump':'idle';facing=1;
-          } else { x=goal.x+4-2*Math.sin(t*Math.PI);y=goal.y;facing=-1;pose='idle'; }
+            const approach = this.catchStart.x <= goal.x ? 1 : -1;
+            x=this.catchStart.x+(goal.x-12*approach-this.catchStart.x)*ease(t);
+            y=this.catchStart.y+(goal.y-this.catchStart.y)*ease(t);
+            pose='idle';facing=approach;
+          } else { facing=this.catchStart.x <= goal.x ? -1 : 1;pose='idle'; }
         }
         if(a.grounded && !ending) {
           ctx.save();ctx.globalAlpha=0.22;

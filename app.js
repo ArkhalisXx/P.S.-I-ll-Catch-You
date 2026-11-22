@@ -1,6 +1,7 @@
 (() => {
   const find = (id) => document.getElementById(id);
   const world = find("world");
+  const objective = find("chapter-objective");
   const dialog = find("dialog");
   const dialogTitle = find("dialog-title");
   const dialogBody = find("dialog-body");
@@ -43,6 +44,9 @@
     heart: [[622, 0, .14], [831, .065, .18]],
     fold: [[349, 0, .1], [440, .045, .11], [523, .09, .14]],
     spring: [[392, 0, .09], [587, .045, .15]],
+    switch: [[330, 0, .08], [554, .045, .12]],
+    pass: [[523, 0, .12], [659, .06, .14], [784, .12, .18]],
+    crumble: [[247, 0, .07], [185, .045, .11]],
     fall: [[392, 0, .09], [294, .045, .14]],
     complete: [[523, 0, .24], [659, .12, .26], [784, .25, .3], [1047, .40, .4]]
   };
@@ -156,7 +160,8 @@
     find("chapter-title").textContent = state.name;
     find("player").textContent = state.character;
     find("player").parentElement.dataset.side = state.character;
-    find("hearts").textContent = state.hearts + " / 3";
+    objective.textContent = state.progress;
+    objective.parentElement.title = state.goalLabel;
     if (find("hint").textContent !== state.hint) find("hint").textContent = state.hint;
   }
 
@@ -224,7 +229,7 @@
       ]);
       return;
     }
-    showDialog("Letter delivered!", paragraphs(names[result] + " is tucked into your card."), [
+    showDialog("Chapter complete", paragraphs(names[result] + " is tucked into your card."), [
       ["Next chapter", () => openChapter(result + 1)],
       ["Replay chapter", () => openChapter(result)]
     ]);
@@ -294,8 +299,8 @@
   find("help").addEventListener("click", () => {
     showDialog("How to play", paragraphs(
       "Move with the arrow keys or A and D. Press Space to jump.",
-      "Press X to fold the card and switch between Axel and Swayze. Hearts collected on one side can open a path on the other.",
-      "Collect all three hearts, then guide the active character to the envelope. Use the on-screen controls on a touch screen."
+      "Press X to fold the card and switch between Axel and Swayze. Use the on-screen controls on a touch screen.",
+      "Follow the note under the play area. Step onto switches, pass letters between pages, and time your jumps across moving or fragile paper. If you fall, you’ll return to safe ground."
     ), [["Back to the card", () => dialog.close()]]);
   });
 

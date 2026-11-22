@@ -70,8 +70,8 @@ h1 em { color: var(--rose); font-weight: 700; }
   color: #503745; font: bold .875rem/1 var(--mono);
 }
 .player { left: 13px; }
-.heart-meter { right: 13px; }
-.heart-meter canvas { width: 16px; height: 16px; image-rendering: pixelated; }
+.objective-meter { right: 13px; max-width: 64%; }
+.objective-meter canvas { width: 16px; height: 16px; image-rendering: pixelated; flex: 0 0 auto; }
 .status-light { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: #3b8068; box-shadow: inset 0 0 0 1px #2d6656; }
 .player[data-side="Swayze"] .status-light { background: #d16a88; box-shadow: inset 0 0 0 1px #ad4f6a; }
 .hintbar { min-height: 46px; display: flex; align-items: center; gap: 9px; padding: 7px 15px; color: #71535c; font-size: .9rem; }
@@ -142,8 +142,8 @@ dialog h2 { font: 700 2rem/1.05 var(--serif); color: var(--rose); margin: 14px 0
   #chapter-title { font-size: 1rem; }
   .hud { font-size: .75rem; top: 5px; padding: 5px 6px; gap: 5px; }
   .player { left: 5px; }
-  .heart-meter { right: 5px; }
-  .heart-meter canvas { width: 12px; height: 12px; }
+  .objective-meter { right: 5px; }
+  .objective-meter canvas { width: 12px; height: 12px; }
   .hintbar { min-height: 49px; padding: 5px 7px; font-size: .82rem; }
   .chapters { padding: 10px; }
   #chapter-list { grid-template-columns: repeat(5, 1fr); }
